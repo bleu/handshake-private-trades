@@ -16,12 +16,13 @@
     "format:check": "prettier --check . && forge fmt --check",
     "build:contracts": "forge build",
     "lint:contracts": "solhint 'contracts/**/*.sol' --max-warnings 0 && .tools/bin/lintspec contracts",
-    "check": "npm run format:check && npm run lint:web && npm run typecheck && npm run lint:contracts && npm run build:contracts && npm run build",
+    "check": "npm run format:check && npm run lint:web && npm run typecheck && npm run lint:contracts && npm run build:contracts && npm run test:contracts && npm run build",
     "local:start": "node scripts/local-chain.mjs start",
     "local:reset": "node scripts/local-chain.mjs reset",
     "local:fixtures": "node scripts/local-chain.mjs fixtures",
     "local:smoke": "node scripts/local-chain.mjs smoke",
-    "test:e2e": "npm run test:e2e -w web"
+    "test:e2e": "npm run test:e2e -w web",
+    "test:contracts": "forge test"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

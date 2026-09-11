@@ -11,3 +11,4 @@ docs/adr/
 docs/agents/
 web/test-results/
 web/playwright-report/
+lib/forge-std/

@@ -5,6 +5,9 @@ Standalone private trade links. Product language and accepted architecture live 
 
 ## Toolchain and installation
 
+Clone with `git clone --recurse-submodules`, or run `git submodule update --init --recursive`
+after cloning. forge-std is pinned by its submodule commit and `foundry.lock`.
+
 Use Node 24.11.0 and npm 11.6.1. Install the committed lockfile with `npm ci`.
 Foundry is pinned to commit `5e88010a83d1b87b8f4d13058e42a2949d3e9dc0`
 (`foundryup --install nightly-5e88010a83d1b87b8f4d13058e42a2949d3e9dc0`). Solidity is
@@ -26,9 +29,11 @@ The root `.env.example` describes local command-line configuration.
   and lintspec NatSpec checks.
 - `npm run check`: all applicable setup quality gates, including both builds.
 
-The initial Solidity contract is only a compiler smoke target. No settlement or
-public deployment is available. Tests and ABI consistency join the gates as
-those behaviors become available in subsequent tickets.
+The Solidity workspace exposes the immutable order hash and status interface.
+Settlement/cancellation remain disabled until their implementation tickets.
+`npm run test:contracts` runs public-interface Foundry tests, including independent
+reference digests in `fixtures/order-hashes.json`; tests are included in `check`.
+No public deployment is available. ABI consistency joins the gates when exported.
 
 Vendor/generated output is excluded narrowly from formatting/linting. Frontend dependencies' declarations use
 TypeScript's standard `skipLibCheck`; maintained source remains strictly checked.
