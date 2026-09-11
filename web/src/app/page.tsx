@@ -1,8 +1,8 @@
 export default function Home() {
   return (
-    <main>
-      <h1>Private Trade Links</h1>
-      <p>Development workspace ready.</p>
-    </main>
+    <>
+      <h1>Create a trade</h1>
+      <p>Trade creation will be available here.</p>
+    </>
   );
 }

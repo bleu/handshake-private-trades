@@ -9,3 +9,5 @@ package-lock.json
 # Preserve existing domain/planning guidance verbatim.
 docs/adr/
 docs/agents/
+web/test-results/
+web/playwright-report/

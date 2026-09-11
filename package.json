@@ -20,9 +20,11 @@
     "local:start": "node scripts/local-chain.mjs start",
     "local:reset": "node scripts/local-chain.mjs reset",
     "local:fixtures": "node scripts/local-chain.mjs fixtures",
-    "local:smoke": "node scripts/local-chain.mjs smoke"
+    "local:smoke": "node scripts/local-chain.mjs smoke",
+    "test:e2e": "npm run test:e2e -w web"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "24.13.4",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

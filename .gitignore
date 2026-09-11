@@ -9,3 +9,5 @@ broadcast/
 .env*
 !.env.example
 !web/.env.example
+web/test-results/
+web/playwright-report/

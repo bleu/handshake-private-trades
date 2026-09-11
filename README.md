@@ -7,7 +7,7 @@ Standalone private trade links. Product language and accepted architecture live 
 
 Use Node 24.11.0 and npm 11.6.1. Install the committed lockfile with `npm ci`.
 Foundry is pinned to commit `5e88010a83d1b87b8f4d13058e42a2949d3e9dc0`
-(`foundryup --install 5e88010a83d1b87b8f4d13058e42a2949d3e9dc0`). Solidity is
+(`foundryup --install nightly-5e88010a83d1b87b8f4d13058e42a2949d3e9dc0`). Solidity is
 pinned to 0.8.30 in `foundry.toml`, targeting Cancun. Install the NatSpec checker
 locally with `cargo install lintspec --version 0.12.2 --locked --root .tools`.
 
@@ -58,3 +58,29 @@ clients. No public settlement address is configured by these commands.
 
 Solhint constructor visibility is omitted because Solidity 0.8.30 deprecates explicit
 constructor visibility; ordinary function visibility remains enforced.
+
+## Wallet shell
+
+The browser-only shell uses RainbowKit, wagmi, and TanStack Query. Routes `/`,
+`/trade`, and `/history` are placeholders; shared providers stay mounted when
+navigating. Only Gnosis is available in production. Set
+`NEXT_PUBLIC_ENABLE_ANVIL=true` with `npm run dev` to also offer local chain 31337;
+a production build rejects that setting. Wallet connection does not enable trading.
+
+Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` to your 32-character project ID from
+[Reown Dashboard](https://dashboard.reown.com/), and allow your application's origin.
+Without it, injected browser wallets remain available and the UI explains that
+WalletConnect is unavailable. No project credentials are fabricated. Mobile
+WalletConnect compatibility requires the later real-wallet verification ticket.
+See [RainbowKit installation](https://rainbowkit.com/docs/installation).
+
+`NEXT_PUBLIC_GNOSIS_RPC_URL` overrides the public Gnosis RPC
+[`https://rpc.gnosischain.com`](https://docs.gnosischain.com/tools/RPC%20Providers/).
+Use a browser-compatible HTTPS endpoint. The local
+wallet provider uses `http://127.0.0.1:8545` for Anvil. Signed links never supply RPC
+URLs. RPC/WalletConnect public configuration contains no deployment keys.
+
+Run `npx playwright install chromium` once, then `npm run test:e2e -w web`.
+Alternatively use installed Chrome with `PLAYWRIGHT_CHANNEL=chrome`.
+Browser tests use a deterministic EIP-1193 wallet boundary and local server; they
+do not claim real-extension or mobile compatibility verification.

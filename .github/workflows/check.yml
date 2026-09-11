@@ -11,11 +11,13 @@ jobs:
           cache: npm
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: 5e88010a83d1b87b8f4d13058e42a2949d3e9dc0
+          version: nightly-5e88010a83d1b87b8f4d13058e42a2949d3e9dc0
       - uses: dtolnay/rust-toolchain@1.94.0
       - run: cargo install lintspec --version 0.12.2 --locked --root .tools
       - run: npm ci
       - run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
       - name: Local chain smoke
         run: |
           npm run local:start > /tmp/private-trades-anvil.log 2>&1 &
