@@ -19,7 +19,6 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
       - name: Local chain smoke
         run: |
           npm run local:start > /tmp/private-trades-anvil.log 2>&1 &
@@ -38,3 +37,4 @@ jobs:
           npm run local:deploy
           npm run local:settlement-smoke
           npm run local:smoke
+          npm run test:e2e
