@@ -5,7 +5,7 @@
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "NODE_ENV=development next typegen && tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test:e2e": "playwright test"
   },
@@ -24,5 +24,6 @@
     "viem": "2.56.3",
     "wagmi": "2.19.5",
     "zod": "4.6.2"
-  }
+  },
+  "type": "module"
 }

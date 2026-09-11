@@ -89,3 +89,13 @@ Run `npx playwright install chromium` once, then `npm run test:e2e -w web`.
 Alternatively use installed Chrome with `PLAYWRIGHT_CHANNEL=chrome`.
 Browser tests use a deterministic EIP-1193 wallet boundary and local server; they
 do not claim real-extension or mobile compatibility verification.
+
+## Settlement deployment and ABI
+
+Start Anvil with `npm run local:start`, then run `npm run local:reset` and `npm run local:deploy`. This deploys the two fixtures first and settlement third from the documented maker, assigning development ID 2 to `0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0` on chain 31337. Repeating `local:deploy` reuses and verifies this address. Unexpected nonce/code is rejected; reset the disposable local chain instead of remapping an ID. `npm run local:smoke` checks initial token funding; `npm run local:settlement-smoke` verifies compiled runtime (excluding constructor immutable slots), chain, address, EIP-712 domain, and TypeScript/onchain digest parity.
+
+Run `npm run abi:export` after compiling contract changes. `npm run abi:check` recompiles and rejects a stale generated frontend ABI. Never hand-edit `web/src/generated/private-trade-settlement.ts`. Changes to deployed contract code require a new deployment identity; never change a published ID's chain/address/domain.
+
+The frozen typed registry is `web/src/config/deployments.ts`. Public ID 1 is reserved for Gnosis (100); set `NEXT_PUBLIC_GNOSIS_SETTLEMENT_ADDRESS` only from the approved deployment record. No public address has been assigned or deployed here. Missing configuration omits Gnosis trading in development; `npm run build` rejects missing/invalid public configuration and any enabled Anvil deployment. `npm run config:smoke` checks these startup boundaries. WalletConnect remains separately configurable as described above.
+
+`npm run build:smoke` and the quality gate build use an explicitly synthetic Gnosis address solely to verify compilation before public deployment. **Do not publish that build output.** For a release, run the normal `npm run build` with the actual approved immutable deployment configuration and verify its onchain code/domain/hash first. Development-only network and deployment ID 2 are excluded from public builds.

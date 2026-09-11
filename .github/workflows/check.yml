@@ -29,8 +29,12 @@ jobs:
             if cast chain-id --rpc-url http://127.0.0.1:8545; then break; fi
             sleep 1
           done
-          npm run local:fixtures
+          npm run local:deploy
+          npm run local:deploy
+          npm run local:settlement-smoke
           npm run local:smoke
           npm run local:reset
-          npm run local:fixtures
+          npm run local:deploy
+          npm run local:deploy
+          npm run local:settlement-smoke
           npm run local:smoke

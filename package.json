@@ -16,13 +16,19 @@
     "format:check": "prettier --check . && forge fmt --check",
     "build:contracts": "forge build",
     "lint:contracts": "solhint 'contracts/**/*.sol' --max-warnings 0 && .tools/bin/lintspec contracts",
-    "check": "npm run format:check && npm run lint:web && npm run typecheck && npm run lint:contracts && npm run build:contracts && npm run test:contracts && npm run build",
+    "check": "npm run format:check && npm run lint:web && npm run typecheck && npm run lint:contracts && npm run build:contracts && npm run test:contracts && npm run config:smoke && npm run abi:check && npm run build:smoke",
     "local:start": "node scripts/local-chain.mjs start",
     "local:reset": "node scripts/local-chain.mjs reset",
     "local:fixtures": "node scripts/local-chain.mjs fixtures",
     "local:smoke": "node scripts/local-chain.mjs smoke",
     "test:e2e": "npm run test:e2e -w web",
-    "test:contracts": "forge test"
+    "test:contracts": "forge test",
+    "abi:export": "node scripts/export-abi.mjs",
+    "abi:check": "node scripts/export-abi.mjs --check",
+    "local:deploy": "node scripts/local-chain.mjs deploy",
+    "local:settlement-smoke": "node scripts/settlement-smoke.mjs",
+    "build:smoke": "node scripts/build-smoke.mjs",
+    "config:smoke": "node scripts/config-smoke.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

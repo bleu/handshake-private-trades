@@ -63,6 +63,35 @@ if (action === "start") {
     console.log(
       "Local chain reset. Run npm run local:fixtures to redeploy fixtures.",
     );
+  } else if (action === "deploy") {
+    const expected = "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0";
+    if (cast("code", expected) === "0x") {
+      const nonce = Number(cast("nonce", maker));
+      if (nonce === 0)
+        run(process.execPath, ["scripts/local-chain.mjs", "fixtures"]);
+      if (Number(cast("nonce", maker)) !== 2)
+        throw new Error(
+          "Unexpected maker nonce: use local:reset then local:deploy. ID 2 cannot be remapped.",
+        );
+      const result = JSON.parse(
+        run("forge", [
+          "create",
+          "contracts/src/PrivateTradeSettlement.sol:PrivateTradeSettlement",
+          "--broadcast",
+          "--unlocked",
+          "--from",
+          maker,
+          "--rpc-url",
+          rpc,
+          "--json",
+        ]),
+      );
+      if (result.deployedTo.toLowerCase() !== expected)
+        throw new Error("Unexpected settlement identity.");
+    }
+    // An existing deployment must still pass the same ABI/domain/connectivity checks.
+    run(process.execPath, ["scripts/settlement-smoke.mjs"]);
+    console.log("PASS: local deployment ID 2 is available at " + expected);
   } else if (action === "fixtures") {
     const tokens = [];
     for (const [symbol, decimals] of [
@@ -125,6 +154,6 @@ if (action === "start") {
       "PASS: Anvil chain 31337, funded maker/taker, DEV6 and DEV18 balances and decimals.",
     );
   } else {
-    throw new Error("Expected start, reset, fixtures, or smoke.");
+    throw new Error("Expected start, reset, fixtures, deploy, or smoke.");
   }
 }
