@@ -14,7 +14,11 @@ const refreshPolicy = {
   retry: false,
 } as const;
 
-export function useTokenState(chainId: number, address: Address) {
+export function useTokenState(
+  chainId: number,
+  address: Address,
+  readMetadata = false,
+) {
   const { address: account } = useAccount();
   const deployment = deployments.find((entry) => entry.chainId === chainId);
   // Direct reads also work on fresh Anvil without a Multicall3 deployment.
@@ -39,12 +43,32 @@ export function useTokenState(chainId: number, address: Address) {
     args: [account ?? zeroAddress, deployment?.address ?? zeroAddress],
     query: { ...refreshPolicy, enabled: !!account && !!deployment },
   });
+  const name = useReadContract({
+    ...contract,
+    functionName: "name",
+    query: { ...refreshPolicy, enabled: readMetadata },
+  });
+  const symbol = useReadContract({
+    ...contract,
+    functionName: "symbol",
+    query: { ...refreshPolicy, enabled: readMetadata },
+  });
   const refresh = async () => {
     await Promise.all([
       decimals.refetch(),
+      ...(readMetadata ? [name.refetch(), symbol.refetch()] : []),
       ...(account ? [balance.refetch()] : []),
       ...(account && deployment ? [allowance.refetch()] : []),
     ]);
   };
-  return { decimals, balance, allowance, account, deployment, refresh };
+  return {
+    decimals,
+    balance,
+    allowance,
+    account,
+    deployment,
+    refresh,
+    name,
+    symbol,
+  };
 }

@@ -4,7 +4,11 @@ import tseslint from "typescript-eslint";
 
 const publicModules = [
   {
-    group: ["@/domain/orders/*", "**/domain/orders/*"],
+    group: [
+      "@/domain/orders/*",
+      "**/domain/orders/*",
+      "!**/domain/orders/index.ts",
+    ],
     message: "Use the public order module export.",
   },
   {
