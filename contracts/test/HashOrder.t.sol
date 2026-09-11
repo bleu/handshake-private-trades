@@ -67,12 +67,9 @@ contract HashOrderTest is Test {
         assertNotEq(_settlement.hashOrder(_order()), _expected("domain_version"));
     }
 
-    /// @notice Hashing registers nothing and unfinished cancellation cannot consume orders.
-    function testSkeletonLeavesOrdersUnusedAndRejectsWrites() public {
+    /// @notice Hashing an arbitrary order registers nothing.
+    function testHashingLeavesOrdersUnused() public {
         bytes32 _id = _settlement.hashOrder(_order());
-        assertEq(uint8(_settlement.orderStatus(_id)), 0);
-        vm.expectRevert(IPrivateTradeSettlement.PrivateTradeSettlement_NotImplemented.selector);
-        _settlement.cancel(_order());
         assertEq(uint8(_settlement.orderStatus(_id)), 0);
     }
 

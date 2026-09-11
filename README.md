@@ -30,7 +30,7 @@ The root `.env.example` describes local command-line configuration.
 - `npm run check`: all applicable setup quality gates, including both builds.
 
 The Solidity workspace exposes the immutable order hash and status interface.
-Settlement is implemented; cancellation remains disabled until its implementation ticket.
+Settlement and maker-only individual cancellation are implemented.
 `npm run test:contracts` runs public-interface Foundry tests, including independent
 reference digests in `fixtures/order-hashes.json`; tests are included in `check`.
 No public deployment is available. ABI consistency joins the gates when exported.

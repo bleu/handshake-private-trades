@@ -77,7 +77,11 @@ contract PrivateTradeSettlement is IPrivateTradeSettlement, EIP712, ReentrancyGu
     }
 
     /// @inheritdoc IPrivateTradeSettlement
-    function cancel(Order calldata) external pure {
-        revert PrivateTradeSettlement_NotImplemented();
+    function cancel(Order calldata _order) external nonReentrant {
+        if (_order.maker == address(0) || msg.sender != _order.maker) revert PrivateTradeSettlement_WrongCaller();
+        bytes32 _id = hashOrder(_order);
+        if (_orderStatuses[_id] != Status.Unused) revert PrivateTradeSettlement_OrderUnavailable();
+        _orderStatuses[_id] = Status.Cancelled;
+        emit OrderCancelled(_id, _order.maker);
     }
 }

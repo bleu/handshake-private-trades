@@ -44,8 +44,6 @@ interface IPrivateTradeSettlement {
     error PrivateTradeSettlement_OrderUnavailable();
     /// @notice The order's settlement deadline has been reached.
     error PrivateTradeSettlement_OrderExpired();
-    /// @notice This development skeleton does not yet enable the requested write.
-    error PrivateTradeSettlement_NotImplemented();
 
     /// @notice Emitted after both transfer calls succeed.
     /// @param orderId The complete domain-bound order identity.
