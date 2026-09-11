@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { createPublicClient, hashTypedData, http } from "viem";
+import { createPublicClient, http } from "viem";
+import { orderId, orderSchema } from "../web/src/domain/orders/index.ts";
 import { createDeploymentRegistry } from "../web/src/config/deployments.ts";
 
 const url = new URL(process.env.ANVIL_RPC_URL ?? "http://127.0.0.1:8545");
@@ -60,17 +61,9 @@ const order = {
   takerAmount: BigInt(fixture.order.takerAmount),
   expiration: BigInt(fixture.order.expiration),
 };
-const fields = deployment.abi
-  .find((entry) => entry.type === "function" && entry.name === "hashOrder")
-  .inputs[0].components.map(({ name, type }) => ({ name, type }));
 assert.equal(
   await call("hashOrder", [order]),
-  hashTypedData({
-    domain: deployment.domain,
-    types: { Order: fields },
-    primaryType: "Order",
-    message: order,
-  }),
+  orderId(orderSchema.parse(order), deployment.domain),
 );
 console.log(
   "PASS: compiled code, chain, fixed address, EIP-712 domain and hashOrder parity.",
