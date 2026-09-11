@@ -7,3 +7,9 @@ export { encodeOrderLink, decodeOrderLink } from "./codec.ts";
 export type { SignedOrderLink, LinkDeployment } from "./codec.ts";
 export { expirationAtSignature } from "./durations.ts";
 export type { DurationChoice } from "./durations.ts";
+export {
+  creationDraftSchema,
+  validateCreation,
+  durationChoices,
+} from "./creation.ts";
+export type { CreationDraft } from "./creation.ts";

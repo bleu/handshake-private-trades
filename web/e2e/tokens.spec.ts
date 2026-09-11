@@ -41,7 +41,7 @@ test("token discovery filters the CoW list by network and keeps addresses inspec
   await page.route("https://files.cow.fi/tokens/CowSwap.json", (route) =>
     route.fulfill({ json: list }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await expect(page.getByLabel("Token", { exact: true })).toBeVisible();
   await expect(
     page
@@ -76,7 +76,7 @@ test("selection uses fresh onchain decimals instead of the list's claimed precis
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token", { exact: true }).selectOption(token);
   await expect(
     page.getByText("Decimals (onchain): 6", { exact: true }),
@@ -106,7 +106,7 @@ test("unreadable decimals block selection until a fresh read succeeds, including
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token", { exact: true }).selectOption(token);
   await expect(
     page.getByText("Decimals unavailable. This token cannot be used.", {
@@ -157,7 +157,7 @@ test("balances and allowances use exact onchain scaling and refresh for the conn
     }
     await route.fulfill({ json: { jsonrpc: "2.0", id: request.id, result } });
   });
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByRole("button", { name: "Connect Wallet" }).click();
   await page
     .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
@@ -192,7 +192,7 @@ test("list failures distinguish unavailable membership from an explicitly stale 
       ? route.fulfill({ json: list })
       : route.fulfill({ status: 503, body: "unavailable" }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await expect(
     page.getByText("Token list unavailable. Membership is unknown.", {
       exact: true,
@@ -253,7 +253,7 @@ test("listed logos are shown and missing metadata or broken logos use address fa
   await page.route("https://files.cow.fi/images/missing.png", (route) =>
     route.fulfill({ status: 404 }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token", { exact: true }).selectOption(token);
   await expect(
     page.getByRole("img", { name: "SIX logo", exact: true }),
@@ -288,7 +288,7 @@ test("network selection scopes the list and reads real Anvil token state indepen
       },
     }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByRole("button", { name: "Connect Wallet" }).click();
   await page
     .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
@@ -331,7 +331,7 @@ test("a malformed list never supplies token options", async ({ page }) => {
       },
     }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await expect(
     page.getByText("Token list unavailable. Membership is unknown.", {
       exact: true,
@@ -361,7 +361,7 @@ test("failed decimal revalidation does not reuse previously successful scaling",
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token", { exact: true }).selectOption(token);
   await expect(page.getByRole("button", { name: "Use token" })).toBeEnabled();
   healthy = false;
@@ -383,7 +383,7 @@ test("the official list's offset timestamp is accepted", async ({ page }) => {
       json: { ...list, timestamp: "2026-07-29T18:00:00+00:00" },
     }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await expect(
     page
       .getByLabel("Token", { exact: true })
@@ -407,7 +407,7 @@ test("out-of-range decimals returned by a token are unusable", async ({
       },
     });
   });
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token", { exact: true }).selectOption(token);
   await expect(
     page.getByText("Decimals unavailable. This token cannot be used.", {

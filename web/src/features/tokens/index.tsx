@@ -43,3 +43,4 @@ export function TokenExplorer() {
   );
 }
 export { TokenSelector } from "./token-selector";
+export { TokenNotice } from "./token-notice";

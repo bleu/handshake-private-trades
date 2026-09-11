@@ -21,6 +21,9 @@ export default function WalletShell({ children }: { children: ReactNode }) {
             <Button asChild>
               <Link href="/history">History</Link>
             </Button>
+            <Button asChild>
+              <Link href="/tokens">Tokens</Link>
+            </Button>
           </nav>
           <WalletControls />
         </header>

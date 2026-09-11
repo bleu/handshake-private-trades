@@ -7,7 +7,7 @@ test("a custom token persists across reloads and remains usable while the CoW li
   await page.route("https://files.cow.fi/tokens/CowSwap.json", (route) =>
     route.fulfill({ status: 503, body: "Unavailable" }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token network", { exact: true }).selectOption("31337");
   await page.getByLabel("Token address", { exact: true }).fill(token);
   await page
@@ -43,7 +43,7 @@ test("custom names and symbols come from chain rather than cached imports", asyn
       },
     }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token network", { exact: true }).selectOption("31337");
   await page.getByLabel("Token address", { exact: true }).fill(token);
   await page
@@ -70,7 +70,7 @@ test("failed import persistence reports an error without claiming a saved import
   await page.route("https://files.cow.fi/tokens/CowSwap.json", (route) =>
     route.fulfill({ status: 503, body: "Unavailable" }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token network", { exact: true }).selectOption("31337");
   await page.getByLabel("Token address", { exact: true }).fill(token);
   await page
@@ -96,10 +96,10 @@ test("saving in another tab refreshes imported token selection without losing ex
   await context.route("https://files.cow.fi/tokens/CowSwap.json", (route) =>
     route.fulfill({ status: 503, body: "Unavailable" }),
   );
-  await page.goto("/");
+  await page.goto("/tokens");
   await page.getByLabel("Token network", { exact: true }).selectOption("31337");
   const other = await context.newPage();
-  await other.goto("/");
+  await other.goto("/tokens");
   await other
     .getByLabel("Token network", { exact: true })
     .selectOption("31337");

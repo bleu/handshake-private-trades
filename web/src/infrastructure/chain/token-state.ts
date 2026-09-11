@@ -16,18 +16,24 @@ const refreshPolicy = {
 
 export function useTokenState(
   chainId: number,
-  address: Address,
+  address: Address | undefined,
   readMetadata = false,
 ) {
   const { address: account } = useAccount();
   const deployment = deployments.find((entry) => entry.chainId === chainId);
   // Direct reads also work on fresh Anvil without a Multicall3 deployment.
-  const contract = { chainId, address, abi: erc20Abi, batch: false } as const;
+  const contract = {
+    chainId,
+    address: address ?? zeroAddress,
+    abi: erc20Abi,
+    batch: false,
+  } as const;
   const decimals = useReadContract({
     ...contract,
     functionName: "decimals",
     query: {
       ...refreshPolicy,
+      enabled: !!address,
       select: (value) => z.number().int().min(0).max(255).parse(value),
     },
   });
@@ -35,23 +41,26 @@ export function useTokenState(
     ...contract,
     functionName: "balanceOf",
     args: [account ?? zeroAddress],
-    query: { ...refreshPolicy, enabled: !!account },
+    query: { ...refreshPolicy, enabled: !!address && !!account },
   });
   const allowance = useReadContract({
     ...contract,
     functionName: "allowance",
     args: [account ?? zeroAddress, deployment?.address ?? zeroAddress],
-    query: { ...refreshPolicy, enabled: !!account && !!deployment },
+    query: {
+      ...refreshPolicy,
+      enabled: !!address && !!account && !!deployment,
+    },
   });
   const name = useReadContract({
     ...contract,
     functionName: "name",
-    query: { ...refreshPolicy, enabled: readMetadata },
+    query: { ...refreshPolicy, enabled: !!address && readMetadata },
   });
   const symbol = useReadContract({
     ...contract,
     functionName: "symbol",
-    query: { ...refreshPolicy, enabled: readMetadata },
+    query: { ...refreshPolicy, enabled: !!address && readMetadata },
   });
   const refresh = async () => {
     await Promise.all([
