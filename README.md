@@ -36,3 +36,25 @@ TypeScript's standard `skipLibCheck`; maintained source remains strictly checked
 Solhint enforces private/internal underscore names. Its alternative non-state
 underscore rule conflicts with the ADR's public constants and private state
 naming, so parameter/local underscore conventions remain part of ticket review.
+
+## Local blockchain
+
+Run `npm run local:start` in a dedicated terminal, then `npm run local:fixtures`
+and `npm run local:smoke`. The node binds loopback, chain 31337, with 10 accounts
+and 10,000 development ETH each. The development-only mnemonic is
+`test test test test test test test test test test test junk`. Never send real
+assets to these publicly known accounts. Maker is
+`0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`; taker is
+`0x70997970C51812dc3A010C7d01b50e0d17dc79C8`. Accounts are unlocked locally;
+fixture deployment needs no private key configuration.
+
+The fixtures mint 1,000,000 DEV6 (6 decimals) and DEV18 (18 decimals) to each
+account. Addresses are written to ignored `.scratch/local-chain.json`.
+`npm run local:reset` clears chain state; run fixtures and smoke again afterward.
+Restarting the node also creates fresh state. `ANVIL_RPC_URL` may select a local
+port (default 8545 when omitted), including IPv6 loopback; `localhost` resolves
+to IPv4 loopback consistently. Mutation commands reject non-loopback URLs, non-31337 chains, and non-Anvil
+clients. No public settlement address is configured by these commands.
+
+Solhint constructor visibility is omitted because Solidity 0.8.30 deprecates explicit
+constructor visibility; ordinary function visibility remains enforced.

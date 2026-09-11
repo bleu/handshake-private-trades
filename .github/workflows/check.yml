@@ -16,3 +16,17 @@ jobs:
       - run: cargo install lintspec --version 0.12.2 --locked --root .tools
       - run: npm ci
       - run: npm run check
+      - name: Local chain smoke
+        run: |
+          npm run local:start > /tmp/private-trades-anvil.log 2>&1 &
+          node_pid=$!
+          trap 'kill "$node_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if cast chain-id --rpc-url http://127.0.0.1:8545; then break; fi
+            sleep 1
+          done
+          npm run local:fixtures
+          npm run local:smoke
+          npm run local:reset
+          npm run local:fixtures
+          npm run local:smoke

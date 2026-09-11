@@ -16,7 +16,11 @@
     "format:check": "prettier --check . && forge fmt --check",
     "build:contracts": "forge build",
     "lint:contracts": "solhint 'contracts/**/*.sol' --max-warnings 0 && .tools/bin/lintspec contracts",
-    "check": "npm run format:check && npm run lint:web && npm run typecheck && npm run lint:contracts && npm run build:contracts && npm run build"
+    "check": "npm run format:check && npm run lint:web && npm run typecheck && npm run lint:contracts && npm run build:contracts && npm run build",
+    "local:start": "node scripts/local-chain.mjs start",
+    "local:reset": "node scripts/local-chain.mjs reset",
+    "local:fixtures": "node scripts/local-chain.mjs fixtures",
+    "local:smoke": "node scripts/local-chain.mjs smoke"
   },
   "devDependencies": {
     "@types/node": "24.13.4",
@@ -28,5 +32,8 @@
     "solhint-community": "4.0.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.57.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.4.0"
   }
 }

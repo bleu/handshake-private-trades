@@ -9,6 +9,12 @@
       {
         "strict": false
       }
+    ],
+    "func-visibility": [
+      "error",
+      {
+        "ignoreConstructors": true
+      }
     ]
   }
 }
