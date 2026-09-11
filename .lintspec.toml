@@ -1,0 +1,5 @@
+[lintspec]
+# Standalone declarations use complete NatSpec; actual overrides inherit docs.
+# Requiring @inheritdoc on every public declaration would reject non-inherited APIs.
+inheritdoc = false
+inheritdoc_override = true

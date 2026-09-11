@@ -1,0 +1,32 @@
+{
+  "name": "private-trade-links",
+  "private": true,
+  "workspaces": [
+    "web"
+  ],
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "typecheck": "npm run typecheck -w web",
+    "lint:web": "npm run lint -w web",
+    "format": "prettier --write . && forge fmt",
+    "format:check": "prettier --check . && forge fmt --check",
+    "build:contracts": "forge build",
+    "lint:contracts": "solhint 'contracts/**/*.sol' --max-warnings 0 && .tools/bin/lintspec contracts",
+    "check": "npm run format:check && npm run lint:web && npm run typecheck && npm run lint:contracts && npm run build:contracts && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.3.5",
+    "prettier": "3.8.2",
+    "solhint-community": "4.0.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.57.1"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "compiler-version": ["error", "0.8.30"],
+    "custom-errors": "error",
+    "imports-on-top": "error",
+    "private-vars-leading-underscore": [
+      "error",
+      {
+        "strict": false
+      }
+    ]
+  }
+}

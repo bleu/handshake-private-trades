@@ -1,1 +1,11 @@
 .scratch/
+node_modules/
+web/.next/
+*.tsbuildinfo
+.tools/
+contracts/out/
+contracts/cache/
+broadcast/
+.env*
+!.env.example
+!web/.env.example

@@ -1,0 +1,11 @@
+.scratch/
+.tools/
+node_modules/
+web/.next/
+web/next-env.d.ts
+contracts/
+broadcast/
+package-lock.json
+# Preserve existing domain/planning guidance verbatim.
+docs/adr/
+docs/agents/
