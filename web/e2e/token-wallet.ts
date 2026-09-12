@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 export async function connectTokenWallet(page: Page) {
   await page.addInitScript(() => {
     let connected = false;
+    let chainId = "0x64";
     let account = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
     const listeners = new Map<string, Set<(value: unknown) => void>>();
     Object.defineProperty(window, "ethereum", {
@@ -15,7 +16,7 @@ export async function connectTokenWallet(page: Page) {
           }
           if (method === "eth_accounts")
             return Promise.resolve(connected ? [account] : []);
-          if (method === "eth_chainId") return Promise.resolve("0x64");
+          if (method === "eth_chainId") return Promise.resolve(chainId);
           if (method === "wallet_requestPermissions")
             return Promise.resolve([{ parentCapability: "eth_accounts" }]);
           if (method === "wallet_revokePermissions")
@@ -33,6 +34,11 @@ export async function connectTokenWallet(page: Page) {
           listeners.get(event)?.delete(listener);
         },
       },
+    });
+    window.addEventListener("test:token-network", () => {
+      chainId = "0x7a69";
+      for (const listener of listeners.get("chainChanged") ?? [])
+        listener(chainId);
     });
     window.addEventListener("test:token-account", () => {
       account = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";

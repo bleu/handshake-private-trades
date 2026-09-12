@@ -14,6 +14,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { anvil, gnosis } from "wagmi/chains";
 import type { Chain } from "viem";
+import { WalletReadRefresh } from "@/infrastructure/chain/wallet-read-refresh";
 import { walletSettings } from "@/config/wallet";
 
 const chains: readonly [Chain, ...Chain[]] = walletSettings.enableAnvil
@@ -22,6 +23,8 @@ const chains: readonly [Chain, ...Chain[]] = walletSettings.enableAnvil
 
 const config = createConfig({
   chains,
+  // Fresh Anvil deployments have no Multicall3 contract.
+  batch: { multicall: false },
   connectors: connectorsForWallets(
     [
       {
@@ -47,7 +50,10 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>{children}</RainbowKitProvider>
+        <RainbowKitProvider>
+          <WalletReadRefresh />
+          {children}
+        </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

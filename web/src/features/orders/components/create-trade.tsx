@@ -1,5 +1,6 @@
 "use client";
 
+import { CreationReadiness } from "./creation-readiness";
 import { useDraft } from "../hooks/use-draft";
 import { useState } from "react";
 import { useAccount, useChains } from "wagmi";
@@ -141,6 +142,15 @@ function CreationForm({
         <p>Duration: {draft.duration}</p>
         <p>The expiration deadline will be set when you request a signature.</p>
         {!terms && <p role="alert">{validationError}</p>}
+        {terms && send.decimals.isSuccess && (
+          <CreationReadiness
+            deployment={deployment}
+            maker={terms.maker}
+            token={terms.makerToken}
+            amount={terms.makerAmount}
+            decimals={send.decimals.data}
+          />
+        )}
         <Button
           onClick={() => {
             update({ stage: "edit" });
