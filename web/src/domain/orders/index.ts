@@ -16,3 +16,4 @@ export type { CreationDraft } from "./creation.ts";
 export { approvalPlan } from "./readiness.ts";
 export type { ApprovalInput, KnownOrder, OrderStatus } from "./readiness.ts";
 export { signingOrder } from "./signing.ts";
+export { tradeStatus } from "./status.ts";

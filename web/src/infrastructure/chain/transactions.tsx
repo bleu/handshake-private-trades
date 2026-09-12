@@ -16,7 +16,8 @@ export type SignedResult = {
   signed: SignedOrderLink;
   draft: CreationDraft;
   expired: boolean;
-  warning?: string;
+  historyWarning?: string;
+  cleanupWarning?: string;
 };
 type SignatureRequest = {
   chainId: number;

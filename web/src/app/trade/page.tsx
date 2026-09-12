@@ -1,10 +1,4 @@
-import { SignedTradeResult } from "@/features/orders/components/signed-trade-result";
+import { TradeLink } from "@/features/orders/components/trade-link";
 export default function Trade() {
-  return (
-    <>
-      <h1>Review a trade</h1>
-      <p>Open a trade link to review its terms.</p>
-      <SignedTradeResult />
-    </>
-  );
+  return <TradeLink />;
 }

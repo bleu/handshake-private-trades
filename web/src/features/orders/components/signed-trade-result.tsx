@@ -8,7 +8,11 @@ import { useTransactions } from "@/infrastructure/chain/transactions";
 
 const subscribe = () => () => {};
 const originSnapshot = () => window.location.origin;
-export function SignedTradeResult() {
+export function SignedTradeResult({
+  historyHandled = false,
+}: {
+  historyHandled?: boolean;
+}) {
   const { signedResult } = useTransactions();
   const router = useRouter();
   const fragment = useTradeFragment();
@@ -18,7 +22,12 @@ export function SignedTradeResult() {
   const link = origin + signedResult.url;
   return (
     <section className="space-y-3">
-      {signedResult.warning && <p role="alert">{signedResult.warning}</p>}
+      {!historyHandled && signedResult.historyWarning && (
+        <p role="alert">{signedResult.historyWarning}</p>
+      )}
+      {signedResult.cleanupWarning && (
+        <p role="alert">{signedResult.cleanupWarning}</p>
+      )}
       {signedResult.expired && <p>Expired</p>}
       <label className="block">
         Trade link

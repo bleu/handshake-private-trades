@@ -114,16 +114,13 @@ export function useSignOrder({
           ? browserStorage.clearDraft(deployment.id, completedRevision)
           : { ok: true as const };
         clearTransientDraft(deployment.id, draft);
-        const warning = [
-          ...(saved.ok ? [] : [saved.error]),
-          ...(cleanup.ok ? [] : [cleanup.error]),
-        ].join(" ");
         return {
           url: saved.url,
           signed,
           draft: captured,
           expired: order.expiration <= BigInt(Math.floor(Date.now() / 1000)),
-          ...(warning ? { warning } : {}),
+          ...(saved.ok ? {} : { historyWarning: saved.error }),
+          ...(cleanup.ok ? {} : { cleanupWarning: cleanup.error }),
         };
       },
     });
