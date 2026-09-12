@@ -291,7 +291,9 @@ test("a competing cancellation while the wallet is open prevents settlement and 
   });
   release();
   await expect(
-    page.getByText(/Settlement failed or was rejected/),
+    page.getByText("Settlement reverted. Review the current state and retry.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     page.getByText("Order status: Cancelled", { exact: true }),

@@ -7,6 +7,15 @@ export async function installAnvilWallet(
   await page.addInitScript((initialAccount) => {
     let connected = false;
     let account = initialAccount;
+    let chainId = "0x7a69";
+    window.addEventListener("test:anvil-chain", (event) => {
+      const value: unknown =
+        event instanceof CustomEvent ? event.detail : undefined;
+      if (typeof value !== "string") return;
+      chainId = value;
+      for (const listener of listeners.get("chainChanged") ?? [])
+        listener(chainId);
+    });
     const listeners = new Map<string, Set<(value: unknown) => void>>();
     window.addEventListener("test:anvil-account", (event) => {
       const value: unknown =
@@ -31,7 +40,7 @@ export async function installAnvilWallet(
             return [account];
           }
           if (method === "eth_accounts") return connected ? [account] : [];
-          if (method === "eth_chainId") return "0x7a69";
+          if (method === "eth_chainId") return chainId;
           if (method === "wallet_requestPermissions")
             return [{ parentCapability: "eth_accounts" }];
           if (method === "wallet_revokePermissions") return null;

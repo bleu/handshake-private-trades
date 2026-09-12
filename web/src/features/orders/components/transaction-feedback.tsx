@@ -1,8 +1,22 @@
 "use client";
-import { useTransactions } from "@/infrastructure/chain/transactions";
+import {
+  useTransactions,
+  type Transaction,
+} from "@/infrastructure/chain/transactions";
 export function TransactionFeedback() {
-  const { activity } = useTransactions();
-  if (!activity) return null;
+  const { activity, recoveries } = useTransactions();
+  return (
+    <>
+      {activity && <Feedback activity={activity} />}
+      {recoveries
+        .filter((entry) => entry.originalHash !== activity?.originalHash)
+        .map((entry) => (
+          <Feedback key={entry.originalHash} activity={entry} />
+        ))}
+    </>
+  );
+}
+function Feedback({ activity }: { activity: Transaction }) {
   return (
     <aside
       aria-live="polite"
@@ -13,6 +27,11 @@ export function TransactionFeedback() {
       <p className="break-all text-sm">
         Account: {activity.account} · Chain: {activity.chainId}
       </p>
+      {activity.originalHash && activity.originalHash !== activity.hash && (
+        <p className="break-all">
+          Original transaction: {activity.originalHash}
+        </p>
+      )}
       {activity.hash &&
         (activity.chainId === 100 ? (
           <a
