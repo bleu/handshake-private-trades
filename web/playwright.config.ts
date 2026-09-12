@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 // These suites write from the same Anvil accounts; concurrent suites race nonces.
 const anvilTransactions =
-  /(?:approval|signing|trade-link|acceptance|cancellation|history|recovery)\.spec\.ts$/;
+  /(?:approval|signing|trade-link|acceptance|cancellation|history|recovery|integrated)\.spec\.ts$/;
 
 export default defineConfig({
   projects: [

@@ -27,7 +27,7 @@ export default function WalletShell({ children }: { children: ReactNode }) {
           </nav>
           <WalletControls />
         </header>
-        <main className="rounded-xl border border-zinc-200 bg-white p-6">
+        <main className="wrap-anywhere rounded-xl border border-zinc-200 bg-white p-6">
           {children}
         </main>
       </div>
