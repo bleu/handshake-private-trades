@@ -10,6 +10,7 @@ import { useTradeFragment } from "../hooks/use-trade-fragment";
 import { useVerifiedTrade } from "../hooks/use-verified-trade";
 import { useRestoreOrder } from "../hooks/use-restore-order";
 import { useTradeState } from "../hooks/use-trade-state";
+import { CancelOrder } from "./cancel-order";
 import { MakerApprovalRepair } from "./maker-approval-repair";
 import { TradeAcceptance } from "./trade-acceptance";
 import { SignedTradeResult } from "./signed-trade-result";
@@ -164,11 +165,20 @@ function TradeDetails({
         )}
       {state.address?.toLowerCase() === order.maker.toLowerCase() &&
         !["Filled", "Cancelled", "Expired"].includes(state.label) && (
-          <MakerApprovalRepair
-            entry={entry}
-            deployment={deployment}
-            state={state}
-          />
+          <>
+            <MakerApprovalRepair
+              entry={entry}
+              deployment={deployment}
+              state={state}
+            />
+            <CancelOrder
+              entry={entry}
+              deployment={deployment}
+              ready={
+                state.label === "Open" && state.chainId === deployment.chainId
+              }
+            />
+          </>
         )}
       <SignedTradeResult
         historyHandled={
