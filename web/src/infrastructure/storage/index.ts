@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { zeroAddress } from "viem";
-import { addressSchema } from "../../domain/orders/index.ts";
+import {
+  addressSchema,
+  creationDraftSchema,
+} from "../../domain/orders/index.ts";
 
 export type StoragePort = Pick<
   Storage,
@@ -17,11 +20,84 @@ const importRecord = z.object({ version: z.literal(1), token: tokenSchema });
 const importKey = (token: TokenImport) =>
   `ptl:imports:${String(token.chainId)}:${token.address.toLowerCase()}`;
 
+const deploymentIdSchema = z.union([z.literal(1), z.literal(2)]);
+const draftRecordSchema = z.strictObject({
+  version: z.literal(1),
+  revision: z.uuid(),
+  draft: creationDraftSchema,
+});
+export type SavedDraft = z.infer<typeof draftRecordSchema>;
+const draftKey = (deploymentId: number) =>
+  `ptl:draft:${String(deploymentIdSchema.parse(deploymentId))}`;
+
 export function createStorageAdapter(
   getStorage: () => StoragePort,
   onChange: () => void = () => {},
 ) {
   return {
+    saveDraft(
+      deploymentId: number,
+      input: z.input<typeof creationDraftSchema>,
+    ): { ok: true; record: SavedDraft } | { ok: false; error: string } {
+      try {
+        const record = draftRecordSchema.parse({
+          version: 1,
+          revision: crypto.randomUUID(),
+          draft: input,
+        });
+        getStorage().setItem(draftKey(deploymentId), JSON.stringify(record));
+        onChange();
+        return { ok: true, record };
+      } catch {
+        return {
+          ok: false,
+          error:
+            "Draft could not be saved. Your current form is usable, but may not survive refresh.",
+        };
+      }
+    },
+    clearDraft(deploymentId: number, revision: string): WriteResult {
+      try {
+        // Mark only the completed revision. Never overwrite the draft head: a
+        // concurrent tab may have saved newer terms while signing was pending.
+        getStorage().setItem(
+          `${draftKey(deploymentId)}:completed:${z.uuid().parse(revision)}`,
+          JSON.stringify({ version: 1, completed: true }),
+        );
+        onChange();
+        return { ok: true };
+      } catch {
+        return {
+          ok: false,
+          error:
+            "Completed draft could not be cleared. The signed link remains valid.",
+        };
+      }
+    },
+    readDraft(deploymentId: number): ReadResult<SavedDraft | null> {
+      try {
+        const value = getStorage().getItem(draftKey(deploymentId));
+        if (value === null) return { value: null };
+        const record = draftRecordSchema.parse(JSON.parse(value));
+        const completed = getStorage().getItem(
+          `${draftKey(deploymentId)}:completed:${record.revision}`,
+        );
+        if (completed !== null) {
+          z.strictObject({
+            version: z.literal(1),
+            completed: z.literal(true),
+          }).parse(JSON.parse(completed));
+          return { value: null };
+        }
+        return { value: record };
+      } catch {
+        return {
+          value: null,
+          error:
+            "Saved draft is unavailable or corrupt. You can start a new draft.",
+        };
+      }
+    },
     saveImport(input: z.input<typeof tokenSchema>): WriteResult {
       try {
         const token = tokenSchema.parse(input);

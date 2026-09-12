@@ -52,3 +52,54 @@ await test("failed import writes report failure and malformed records do not era
   assert.ok(unavailable.readImports(100).error);
   assert.deepEqual(storage.readImports(31337).value, []);
 });
+
+await test("partial drafts and review stage survive adapter recreation independently for each deployment", () => {
+  const backend = new MemoryStorage();
+  const storage = createStorageAdapter(() => backend);
+  assert.equal(
+    storage.saveDraft(2, {
+      makerAmount: "1.",
+      duration: "Unlimited",
+      stage: "review",
+    }).ok,
+    true,
+  );
+  const restored = createStorageAdapter(() => backend).readDraft(2);
+  assert.ok(restored.value);
+  assert.equal(restored.value.draft.makerAmount, "1.");
+  assert.equal(restored.value.draft.duration, "Unlimited");
+  assert.equal(restored.value.draft.stage, "review");
+  assert.equal(restored.value.draft.takerAmount, "");
+  assert.deepEqual(storage.readDraft(1), { value: null });
+});
+await test("completed-draft cleanup preserves a newer draft when another tab edited while signing was outstanding", () => {
+  const backend = new MemoryStorage();
+  const storage = createStorageAdapter(() => backend);
+  const completed = storage.saveDraft(2, { makerAmount: "10" });
+  assert.ok(completed.ok);
+  storage.saveDraft(2, { makerAmount: "20" });
+  assert.equal(storage.clearDraft(2, completed.record.revision).ok, true);
+  assert.equal(storage.readDraft(2).value?.draft.makerAmount, "20");
+  const current = storage.readDraft(2).value;
+  assert.ok(current);
+  assert.equal(storage.clearDraft(2, current.revision).ok, true);
+  assert.equal(storage.readDraft(2).value, null);
+  storage.saveDraft(2, { makerAmount: "30" });
+  assert.equal(storage.readDraft(2).value?.draft.makerAmount, "30");
+});
+await test("corrupt or denied draft storage reports errors without inventing saved terms", () => {
+  const backend = new MemoryStorage();
+  backend.setItem("ptl:draft:2", '{"version":999}');
+  const storage = createStorageAdapter(() => backend);
+  assert.equal(storage.readDraft(2).value, null);
+  assert.ok(storage.readDraft(2).error);
+  const denied = createStorageAdapter(() => {
+    throw new Error("Denied");
+  });
+  assert.equal(denied.saveDraft(2, { makerAmount: "1." }).ok, false);
+  assert.ok(denied.readDraft(2).error);
+  assert.equal(
+    denied.clearDraft(2, "11111111-1111-4111-8111-111111111111").ok,
+    false,
+  );
+});

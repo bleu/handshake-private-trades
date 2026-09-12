@@ -1,5 +1,6 @@
 "use client";
 
+import { useDraft } from "../hooks/use-draft";
 import { useState } from "react";
 import { useAccount, useChains } from "wagmi";
 import { zeroAddress } from "viem";
@@ -62,9 +63,11 @@ function CreationForm({
   deployment: Deployment;
   network: string;
 }) {
-  const [draft, setDraft] = useState<CreationDraft>(() =>
-    creationDraftSchema.parse({}),
-  );
+  const {
+    draft,
+    update: saveDraft,
+    error: storageError,
+  } = useDraft(deployment.id);
   const [picker, setPicker] = useState<"makerToken" | "takerToken">();
   const [error, setError] = useState("");
   const { address: maker } = useAccount();
@@ -79,7 +82,7 @@ function CreationForm({
     takerAddress.success ? takerAddress.data : undefined,
   );
   const update = (change: Partial<CreationDraft>) => {
-    setDraft((current) => ({ ...current, ...change }));
+    saveDraft(change);
     setError("");
   };
   let terms: ReturnType<typeof validateCreation> | undefined;
@@ -110,6 +113,7 @@ function CreationForm({
     return (
       <section className="space-y-3">
         <h2>Review trade</h2>
+        {storageError && <p role="alert">{storageError}</p>}
         <p>Network: {network}</p>
         <p className="break-all">Maker: {maker ?? "Connect your wallet"}</p>
         <p>
@@ -148,6 +152,7 @@ function CreationForm({
     );
   return (
     <section className="space-y-4">
+      {storageError && <p role="alert">{storageError}</p>}
       {(
         [
           ["makerToken", "Send"],

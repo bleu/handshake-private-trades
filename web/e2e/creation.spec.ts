@@ -59,6 +59,25 @@ test("maker reviews exact amounts, token addresses and duration before any walle
   await expect(
     page.getByText(/Fee-on-transfer tokens are unsupported/),
   ).toHaveCount(2);
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("test:token-account")),
+  );
+  await expect(
+    page.getByText("Maker: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByLabel("Trade network").selectOption("31337");
+  await expect(
+    page.getByRole("heading", { name: "Review trade", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Duration: 1 day", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Connect Wallet", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Edit terms" }).click();
   await expect(page.getByLabel("Send amount")).toHaveValue("1.234567");
 });
