@@ -230,7 +230,7 @@ test("a signature from the wrong account is rejected without clearing the draft 
         id: z.number(),
         jsonrpc: z.string(),
         method: z.string(),
-        params: z.array(z.unknown()),
+        params: z.array(z.unknown()).default([]),
       })
       .parse(raw);
     if (request.method === "eth_signTypedData_v4")

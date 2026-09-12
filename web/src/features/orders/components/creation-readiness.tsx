@@ -3,7 +3,8 @@ import type { Address } from "viem";
 import { Button } from "@/components/ui/button";
 import type { Deployment } from "@/config/deployments";
 import { SignOrderAction } from "./sign-order-action";
-import { formatAmount, type CreationDraft } from "@/domain/orders";
+import type { CreationDraft } from "@/domain/orders";
+import { ApprovalCommitments } from "./approval-commitments";
 import { ApprovalAction } from "./approval-action";
 import { useApprovalPlan } from "../hooks/use-approval-plan";
 
@@ -44,31 +45,11 @@ export function CreationReadiness({
             ? "Individual balance is sufficient."
             : "Insufficient balance for this order."}
       </p>
-      {plan.aggregateWarning && (
-        <p role="note">
-          Balance does not cover all known open orders. Funds are not reserved.
-        </p>
-      )}
-      <p>
-        Orders missing from this browser&apos;s history are not included in
-        aggregate commitments.
-      </p>
-      {historyError && <p role="alert">{historyError}</p>}
-      {plan.aggregateUnavailable && (
-        <p role="alert">
-          Aggregate status unavailable. The necessary allowance cannot be
-          calculated.
-        </p>
-      )}
-      {!plan.aggregateUnavailable && plan.exactTarget === undefined && (
-        <p>
-          The necessary total exceeds uint256. Maximum approval remains
-          available without guaranteeing coverage of all commitments.
-        </p>
-      )}
-      {plan.exactTarget !== undefined && (
-        <p>Necessary allowance: {formatAmount(plan.exactTarget, decimals)}</p>
-      )}
+      <ApprovalCommitments
+        plan={plan}
+        decimals={decimals}
+        historyError={historyError}
+      />
       <p>
         {plan.needsApproval === undefined
           ? "Allowance readiness unavailable."

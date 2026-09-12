@@ -10,6 +10,8 @@ import { useTradeFragment } from "../hooks/use-trade-fragment";
 import { useVerifiedTrade } from "../hooks/use-verified-trade";
 import { useRestoreOrder } from "../hooks/use-restore-order";
 import { useTradeState } from "../hooks/use-trade-state";
+import { MakerApprovalRepair } from "./maker-approval-repair";
+import { TradeAcceptance } from "./trade-acceptance";
 import { SignedTradeResult } from "./signed-trade-result";
 
 export function TradeLink() {
@@ -146,6 +148,28 @@ function TradeDetails({
       >
         Refresh trade
       </Button>
+      {state.address &&
+        state.address.toLowerCase() !== order.maker.toLowerCase() &&
+        (order.restrictedTaker === zeroAddress ||
+          state.address.toLowerCase() ===
+            order.restrictedTaker.toLowerCase()) &&
+        !["Filled", "Cancelled", "Expired"].includes(state.label) && (
+          <TradeAcceptance
+            key={state.address}
+            entry={entry}
+            deployment={deployment}
+            state={state}
+            taker={state.address}
+          />
+        )}
+      {state.address?.toLowerCase() === order.maker.toLowerCase() &&
+        !["Filled", "Cancelled", "Expired"].includes(state.label) && (
+          <MakerApprovalRepair
+            entry={entry}
+            deployment={deployment}
+            state={state}
+          />
+        )}
       <SignedTradeResult
         historyHandled={
           state.address?.toLowerCase() === order.maker.toLowerCase()

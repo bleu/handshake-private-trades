@@ -13,6 +13,7 @@ export async function openApproval(
   page: Page,
   kind: "ordinary" | "reset" = "ordinary",
   initial = 0n,
+  receiveToken = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
 ) {
   const token = await deployToken(kind);
   if (initial > 0n)
@@ -37,7 +38,7 @@ export async function openApproval(
   }));
   storage.saveDraft(2, {
     makerToken: token,
-    takerToken: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    takerToken: receiveToken,
     makerAmount: "50",
     takerAmount: "1",
     stage: "review",

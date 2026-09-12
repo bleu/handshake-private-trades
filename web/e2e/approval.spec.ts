@@ -13,7 +13,7 @@ test("necessary approval sets the full target once, confirms allowance, and neve
   await page.route("http://127.0.0.1:8545/", async (route) => {
     const raw: unknown = JSON.parse(route.request().postData() ?? "null");
     const request = z
-      .object({ method: z.string(), params: z.array(z.unknown()) })
+      .object({ method: z.string(), params: z.array(z.unknown()).default([]) })
       .parse(raw);
     if (request.method === "eth_sendTransaction") {
       const call = z
@@ -95,7 +95,7 @@ test("a token rejecting direct nonzero approval receives no zero-reset fallback"
   await page.route("http://127.0.0.1:8545/", async (route) => {
     const raw: unknown = JSON.parse(route.request().postData() ?? "null");
     const request = z
-      .object({ method: z.string(), params: z.array(z.unknown()) })
+      .object({ method: z.string(), params: z.array(z.unknown()).default([]) })
       .parse(raw);
     if (request.method === "eth_sendTransaction") {
       const call = z
@@ -194,7 +194,7 @@ test("a successful receipt does not claim readiness when allowance reads remain 
       .object({
         id: z.number(),
         method: z.string(),
-        params: z.array(z.unknown()),
+        params: z.array(z.unknown()).default([]),
       })
       .parse(raw);
     const call = z

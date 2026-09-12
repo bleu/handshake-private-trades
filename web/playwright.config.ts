@@ -1,6 +1,14 @@
 import { defineConfig } from "@playwright/test";
 
+// These suites write from the same Anvil accounts; concurrent suites race nonces.
+const anvilTransactions =
+  /(?:approval|signing|trade-link|acceptance)\.spec\.ts$/;
+
 export default defineConfig({
+  projects: [
+    { name: "browser", testIgnore: anvilTransactions },
+    { name: "anvil", testMatch: anvilTransactions, workers: 1 },
+  ],
   testDir: "./e2e",
   use: {
     baseURL: "http://127.0.0.1:3100",

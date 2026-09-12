@@ -27,9 +27,10 @@ export async function tradeFixture(overrides: Partial<Order> = {}) {
     salt: `0x${randomBytes(32).toString("hex")}`,
     ...overrides,
   };
-  const signature = await localWallet.signTypedData(
-    orderTypedData(order, deployment.domain),
-  );
+  const signature = await localWallet.signTypedData({
+    ...orderTypedData(order, deployment.domain),
+    account: order.maker,
+  });
   const signed = { order, signature, deploymentId: 2 };
   const payload = await encodeOrderLink(signed, tradeRegistry);
   return { signed, payload, deployment, id: orderId(order, deployment.domain) };

@@ -5,11 +5,16 @@ import { readContractQueryOptions } from "wagmi/query";
 import { useQueryClient } from "@tanstack/react-query";
 import { erc20Abi, type Address } from "viem";
 import type { Deployment } from "@/config/deployments";
-import type { ApprovalInput, KnownOrder } from "@/domain/orders";
+import {
+  tradeStatus,
+  type ApprovalInput,
+  type KnownOrder,
+} from "@/domain/orders";
 import {
   ActionError,
   useTransactions,
 } from "@/infrastructure/chain/transactions";
+import { readOrderStatus } from "@/infrastructure/chain/order-status";
 import { readApprovalPlan } from "./read-approval-plan";
 export type ApprovalChoice = "necessary" | "maximum";
 export function useApproveToken({
@@ -58,6 +63,24 @@ export function useApproveToken({
           mode,
           ...(viewed ? { viewed } : {}),
         });
+        if (viewed) {
+          const current = await readOrderStatus(
+            config,
+            client,
+            deployment,
+            viewed.orderId as `0x${string}`,
+          );
+          if (
+            tradeStatus(
+              current,
+              viewed.order.expiration,
+              BigInt(Math.floor(Date.now() / 1000)),
+            ) !== "Open"
+          )
+            throw new ActionError(
+              "Order is no longer open or its status is unavailable. No approval was sent.",
+            );
+        }
         if (fresh.balanceSufficient !== true)
           throw new ActionError(
             "Balance is insufficient or unavailable. Refresh and review before approving.",

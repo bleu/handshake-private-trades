@@ -1,9 +1,12 @@
 import type { Page } from "@playwright/test";
 
-export async function installAnvilWallet(page: Page) {
-  await page.addInitScript(() => {
+export async function installAnvilWallet(
+  page: Page,
+  initialAccount = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+) {
+  await page.addInitScript((initialAccount) => {
     let connected = false;
-    let account = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    let account = initialAccount;
     const listeners = new Map<string, Set<(value: unknown) => void>>();
     window.addEventListener("test:anvil-account", (event) => {
       const value: unknown =
@@ -54,5 +57,5 @@ export async function installAnvilWallet(page: Page) {
         },
       },
     });
-  });
+  }, initialAccount);
 }

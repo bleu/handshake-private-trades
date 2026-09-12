@@ -8,6 +8,7 @@ import {
   type ApprovalInput,
   type KnownOrder,
 } from "@/domain/orders";
+import { readOrderStatus } from "@/infrastructure/chain/order-status";
 import { browserStorage } from "@/infrastructure/storage";
 
 export async function readApprovalPlan(
@@ -30,24 +31,17 @@ export async function readApprovalPlan(
   );
   const known = await Promise.all(
     history.value.map(async (entry): Promise<KnownOrder> => {
-      const status = await client
-        .query({
-          ...readContractQueryOptions(config, {
-            chainId: deployment.chainId,
-            address: deployment.address,
-            abi: deployment.abi,
-            functionName: "orderStatus",
-            args: [entry.orderId],
-          }),
-          staleTime: 0,
-        })
-        .catch(() => undefined);
+      const status = await readOrderStatus(
+        config,
+        client,
+        deployment,
+        entry.orderId,
+      );
       return {
         order: entry.signed.order,
         orderId: entry.orderId,
         deploymentId: entry.signed.deploymentId,
-        status:
-          status === 0 || status === 1 || status === 2 ? status : undefined,
+        status,
       };
     }),
   );
@@ -78,8 +72,21 @@ export async function readApprovalPlan(
       })
       .catch(() => undefined),
   ]);
+  let viewed = input.viewed;
+  if (viewed) {
+    viewed = {
+      ...viewed,
+      status: await readOrderStatus(
+        config,
+        client,
+        deployment,
+        viewed.orderId as `0x${string}`,
+      ),
+    };
+  }
   return approvalPlan({
     ...input,
+    ...(viewed ? { viewed } : {}),
     deploymentId: deployment.id,
     now: BigInt(Math.floor(Date.now() / 1000)),
     known,

@@ -17,3 +17,5 @@ export { approvalPlan } from "./readiness.ts";
 export type { ApprovalInput, KnownOrder, OrderStatus } from "./readiness.ts";
 export { signingOrder } from "./signing.ts";
 export { tradeStatus } from "./status.ts";
+export { settlementReadiness } from "./settlement-readiness.ts";
+export type { SettlementReadiness } from "./settlement-readiness.ts";

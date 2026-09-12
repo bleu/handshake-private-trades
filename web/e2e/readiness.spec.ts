@@ -78,7 +78,7 @@ test("creation distinguishes individual balance from aggregate commitments and u
       .object({
         id: z.number(),
         method: z.string(),
-        params: z.array(z.unknown()),
+        params: z.array(z.unknown()).default([]),
       })
       .parse(raw);
     const call = z
