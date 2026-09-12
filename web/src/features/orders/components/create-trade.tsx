@@ -86,15 +86,15 @@ function CreationForm({
     saveDraft(change);
     setError("");
   };
+  const freshDecimals =
+    send.decimals.isSuccess &&
+    !send.decimals.isFetching &&
+    receive.decimals.isSuccess &&
+    !receive.decimals.isFetching;
   let terms: ReturnType<typeof validateCreation> | undefined;
   let validationError = "Connect a wallet to review your trade.";
   if (maker) {
-    if (
-      send.decimals.isSuccess &&
-      !send.decimals.isFetching &&
-      receive.decimals.isSuccess &&
-      !receive.decimals.isFetching
-    ) {
+    if (send.decimals.isSuccess && receive.decimals.isSuccess) {
       try {
         terms = validateCreation(draft, maker, {
           maker: send.decimals.data,
@@ -110,6 +110,8 @@ function CreationForm({
       validationError =
         "Select both tokens and wait for fresh onchain decimals.";
   }
+  if (terms && !freshDecimals)
+    validationError = "Refreshing token decimals. Wait before continuing.";
   if (draft.stage === "review")
     return (
       <section className="space-y-3">
@@ -141,7 +143,7 @@ function CreationForm({
         )}
         <p>Duration: {draft.duration}</p>
         <p>The expiration deadline will be set when you request a signature.</p>
-        {!terms && <p role="alert">{validationError}</p>}
+        {(!terms || !freshDecimals) && <p role="alert">{validationError}</p>}
         {terms && send.decimals.isSuccess && (
           <CreationReadiness
             deployment={deployment}
@@ -149,6 +151,7 @@ function CreationForm({
             token={terms.makerToken}
             amount={terms.makerAmount}
             decimals={send.decimals.data}
+            ready={freshDecimals}
           />
         )}
         <Button
@@ -242,7 +245,7 @@ function CreationForm({
       {error && <p role="alert">{error}</p>}
       <Button
         onClick={() => {
-          if (terms) update({ stage: "review" });
+          if (terms && freshDecimals) update({ stage: "review" });
           else setError(validationError);
         }}
       >

@@ -14,6 +14,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { anvil, gnosis } from "wagmi/chains";
 import type { Chain } from "viem";
+import { TransactionProvider } from "@/infrastructure/chain/transactions";
+import { TransactionFeedback } from "@/features/orders/components/transaction-feedback";
 import { WalletReadRefresh } from "@/infrastructure/chain/wallet-read-refresh";
 import { walletSettings } from "@/config/wallet";
 
@@ -52,7 +54,10 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <WalletReadRefresh />
-          {children}
+          <TransactionProvider>
+            <TransactionFeedback />
+            {children}
+          </TransactionProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

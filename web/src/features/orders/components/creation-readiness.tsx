@@ -3,6 +3,7 @@ import type { Address } from "viem";
 import { Button } from "@/components/ui/button";
 import type { Deployment } from "@/config/deployments";
 import { formatAmount } from "@/domain/orders";
+import { ApprovalAction } from "./approval-action";
 import { useApprovalPlan } from "../hooks/use-approval-plan";
 
 export function CreationReadiness({
@@ -11,12 +12,14 @@ export function CreationReadiness({
   token,
   amount,
   decimals,
+  ready,
 }: {
   deployment: Deployment;
   maker: Address;
   token: Address;
   amount: bigint;
   decimals: number;
+  ready: boolean;
 }) {
   const { plan, refresh, historyError } = useApprovalPlan({
     deployment,
@@ -66,6 +69,15 @@ export function CreationReadiness({
             ? "Approval is required."
             : "Allowance is sufficient."}
       </p>
+      <ApprovalAction
+        deployment={deployment}
+        maker={maker}
+        token={token}
+        amount={amount}
+        decimals={decimals}
+        plan={plan}
+        ready={ready}
+      />
       <Button
         onClick={() => {
           void refresh();
