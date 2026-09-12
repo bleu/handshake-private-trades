@@ -3,13 +3,14 @@ import { zeroAddress } from "viem";
 import { useChains, useSwitchChain } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { deployments, type Deployment } from "@/config/deployments";
-import { formatAmount, MAX_UINT256 } from "@/domain/orders";
+import { formatAmount } from "@/domain/orders";
 import type { StoredOrder } from "@/infrastructure/storage";
 import { TokenNotice } from "@/features/tokens";
 import { useTradeFragment } from "../hooks/use-trade-fragment";
 import { useVerifiedTrade } from "../hooks/use-verified-trade";
 import { useRestoreOrder } from "../hooks/use-restore-order";
 import { useTradeState } from "../hooks/use-trade-state";
+import { OrderExpiration } from "./order-expiration";
 import { CancelOrder } from "./cancel-order";
 import { MakerApprovalRepair } from "./maker-approval-repair";
 import { TradeAcceptance } from "./trade-acceptance";
@@ -109,24 +110,7 @@ function TradeDetails({
       {order.restrictedTaker === zeroAddress && (
         <p>Anyone can accept this order. The first successful trade wins.</p>
       )}
-      <p>
-        Expiration:{" "}
-        {order.expiration === MAX_UINT256
-          ? "Unlimited"
-          : order.expiration <= 8640000000000n
-            ? new Date(Number(order.expiration) * 1000).toLocaleString(
-                undefined,
-                { timeZoneName: "short" },
-              )
-            : `Unix timestamp ${order.expiration.toString()} seconds (beyond calendar range)`}
-      </p>
-      {order.expiration !== MAX_UINT256 && (
-        <p>
-          {state.now >= order.expiration
-            ? "Deadline reached"
-            : `${(order.expiration - state.now).toString()} seconds remaining`}
-        </p>
-      )}
+      <OrderExpiration expiration={order.expiration} now={state.now} />
       <Funding
         label="Maker"
         funding={state.makerFunding}

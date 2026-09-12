@@ -11,12 +11,13 @@ import {
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createConfig, http, WagmiProvider } from "wagmi";
+import { createConfig, createStorage, http, WagmiProvider } from "wagmi";
 import { anvil, gnosis } from "wagmi/chains";
 import type { Chain } from "viem";
 import { TransactionProvider } from "@/infrastructure/chain/transactions";
 import { TransactionFeedback } from "@/features/orders/components/transaction-feedback";
 import { WalletReadRefresh } from "@/infrastructure/chain/wallet-read-refresh";
+import { walletCache } from "@/infrastructure/chain/wallet-cache";
 import { walletSettings } from "@/config/wallet";
 
 const chains: readonly [Chain, ...Chain[]] = walletSettings.enableAnvil
@@ -24,6 +25,7 @@ const chains: readonly [Chain, ...Chain[]] = walletSettings.enableAnvil
   : [gnosis];
 
 const config = createConfig({
+  storage: createStorage({ storage: walletCache }),
   chains,
   // Fresh Anvil deployments have no Multicall3 contract.
   batch: { multicall: false },

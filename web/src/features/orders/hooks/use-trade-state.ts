@@ -5,7 +5,7 @@ import { tradeStatus } from "@/domain/orders";
 import type { StoredOrder } from "@/infrastructure/storage";
 import type { Deployment } from "@/config/deployments";
 import { useOrderStatuses } from "@/infrastructure/chain/order-status";
-import { useTokenState } from "@/infrastructure/chain/token-state";
+import { useTokenMetadata } from "@/infrastructure/chain/token-metadata";
 import { useTokenFunding } from "@/infrastructure/chain/token-funding";
 
 export function useTradeState(entry: StoredOrder, deployment: Deployment) {
@@ -22,8 +22,16 @@ export function useTradeState(entry: StoredOrder, deployment: Deployment) {
   }, []);
   const query = useOrderStatuses(deployment, [entry.orderId])[0];
   const status = query?.isSuccess && !query.isFetching ? query.data : undefined;
-  const makerToken = useTokenState(deployment.chainId, order.makerToken, true);
-  const takerToken = useTokenState(deployment.chainId, order.takerToken, true);
+  const makerToken = useTokenMetadata(
+    deployment.chainId,
+    order.makerToken,
+    true,
+  );
+  const takerToken = useTokenMetadata(
+    deployment.chainId,
+    order.takerToken,
+    true,
+  );
   const makerFunding = useTokenFunding(
     deployment.chainId,
     order.makerToken,

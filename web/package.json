@@ -8,7 +8,10 @@
     "typecheck": "NODE_ENV=development next typegen && tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test:e2e": "playwright test",
-    "test:unit": "node --test src/domain/orders/*.test.ts src/infrastructure/storage/*.test.ts"
+    "test:unit": "node --test src/domain/orders/*.test.ts src/infrastructure/storage/*.test.ts",
+    "predev": "node ../scripts/patch-wallet-cache.mjs --check",
+    "prebuild": "node ../scripts/patch-wallet-cache.mjs --check",
+    "prestart": "node ../scripts/patch-wallet-cache.mjs --check"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.3.3",
