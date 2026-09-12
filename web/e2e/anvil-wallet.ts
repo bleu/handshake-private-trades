@@ -3,8 +3,16 @@ import type { Page } from "@playwright/test";
 export async function installAnvilWallet(page: Page) {
   await page.addInitScript(() => {
     let connected = false;
-    const account = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    let account = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
     const listeners = new Map<string, Set<(value: unknown) => void>>();
+    window.addEventListener("test:anvil-account", (event) => {
+      const value: unknown =
+        event instanceof CustomEvent ? event.detail : undefined;
+      if (typeof value !== "string") return;
+      account = value;
+      for (const listener of listeners.get("accountsChanged") ?? [])
+        listener([account]);
+    });
     Object.defineProperty(window, "ethereum", {
       value: {
         isMetaMask: true,

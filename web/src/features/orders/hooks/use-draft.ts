@@ -9,6 +9,38 @@ import {
   type SavedDraft,
 } from "@/infrastructure/storage";
 
+let preferredDeployment: number | undefined;
+type TransientDraft = {
+  draft: CreationDraft;
+  error: string;
+  baseRevision: string | undefined;
+};
+const transientDrafts = new Map<number, TransientDraft>();
+export function clearTransientDraft(
+  deploymentId: number,
+  completed: CreationDraft,
+) {
+  if (transientDrafts.get(deploymentId)?.draft === completed)
+    transientDrafts.delete(deploymentId);
+}
+export function preferredDraftDeployment() {
+  return preferredDeployment;
+}
+export function beginDraft(deploymentId: number, draft: CreationDraft) {
+  const next: CreationDraft = { ...draft, stage: "edit" };
+  const baseRevision = browserStorage.readDraft(deploymentId).value?.revision;
+  const result = browserStorage.saveDraft(deploymentId, next);
+  preferredDeployment = deploymentId;
+  if (result.ok) transientDrafts.delete(deploymentId);
+  else
+    transientDrafts.set(deploymentId, {
+      draft: next,
+      error: result.error,
+      baseRevision,
+    });
+  return result;
+}
+
 const emptyDraft = creationDraftSchema.parse({});
 const emptySnapshot: ReadResult<SavedDraft | null> = { value: null };
 function draftReader(deploymentId: number) {
@@ -32,24 +64,31 @@ export function useDraft(deploymentId: number) {
     reader,
     () => emptySnapshot,
   );
-  const [unsaved, setUnsaved] = useState<CreationDraft>();
-  const [writeError, setWriteError] = useState("");
-  const draft = unsaved ?? saved.value?.draft ?? emptyDraft;
+  const [unsaved, setUnsaved] = useState<TransientDraft | undefined>(() =>
+    transientDrafts.get(deploymentId),
+  );
+  const draft = unsaved?.draft ?? saved.value?.draft ?? emptyDraft;
   const update = (change: Partial<CreationDraft>) => {
     const next = { ...draft, ...change };
     const result = browserStorage.saveDraft(deploymentId, next);
     if (result.ok) {
+      transientDrafts.delete(deploymentId);
       setUnsaved(undefined);
-      setWriteError("");
     } else {
-      setUnsaved(next);
-      setWriteError(result.error);
+      const transient = {
+        draft: next,
+        error: result.error,
+        // Capture the persisted base once. Later storage events may carry a newer draft.
+        baseRevision: unsaved ? unsaved.baseRevision : saved.value?.revision,
+      };
+      transientDrafts.set(deploymentId, transient);
+      setUnsaved(transient);
     }
   };
   return {
     draft,
     update,
-    revision: unsaved ? undefined : saved.value?.revision,
-    error: writeError || saved.error,
+    revision: unsaved ? unsaved.baseRevision : saved.value?.revision,
+    error: unsaved?.error || saved.error,
   };
 }

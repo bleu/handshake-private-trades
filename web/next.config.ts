@@ -3,5 +3,8 @@ import type { NextConfig } from "next";
 import "./src/config/wallet";
 import "./src/config/deployments";
 
-const config: NextConfig = {};
+const config: NextConfig = {
+  // Browser tests can run alongside a developer's ordinary Next.js server.
+  distDir: process.env.PTL_E2E === "true" ? ".next-e2e" : ".next",
+};
 export default config;

@@ -101,5 +101,10 @@ export default defineConfig([
       ],
     },
   },
-  globalIgnores([".next/**", "next-env.d.ts", "src/generated/**"]),
+  globalIgnores([
+    ".next-e2e/**",
+    ".next/**",
+    "next-env.d.ts",
+    "src/generated/**",
+  ]),
 ]);

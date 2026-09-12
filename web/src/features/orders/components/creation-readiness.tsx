@@ -2,7 +2,8 @@
 import type { Address } from "viem";
 import { Button } from "@/components/ui/button";
 import type { Deployment } from "@/config/deployments";
-import { formatAmount } from "@/domain/orders";
+import { SignOrderAction } from "./sign-order-action";
+import { formatAmount, type CreationDraft } from "@/domain/orders";
 import { ApprovalAction } from "./approval-action";
 import { useApprovalPlan } from "../hooks/use-approval-plan";
 
@@ -13,6 +14,9 @@ export function CreationReadiness({
   amount,
   decimals,
   ready,
+  draft,
+  revision,
+  takerDecimals,
 }: {
   deployment: Deployment;
   maker: Address;
@@ -20,6 +24,9 @@ export function CreationReadiness({
   amount: bigint;
   decimals: number;
   ready: boolean;
+  draft: CreationDraft;
+  revision: string | undefined;
+  takerDecimals: number;
 }) {
   const { plan, refresh, historyError } = useApprovalPlan({
     deployment,
@@ -77,6 +84,18 @@ export function CreationReadiness({
         decimals={decimals}
         plan={plan}
         ready={ready}
+      />
+      <SignOrderAction
+        deployment={deployment}
+        maker={maker}
+        draft={draft}
+        revision={revision}
+        decimals={{ maker: decimals, taker: takerDecimals }}
+        ready={
+          ready &&
+          plan.balanceSufficient === true &&
+          plan.needsApproval === false
+        }
       />
       <Button
         onClick={() => {

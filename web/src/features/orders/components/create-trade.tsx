@@ -1,7 +1,7 @@
 "use client";
 
 import { CreationReadiness } from "./creation-readiness";
-import { useDraft } from "../hooks/use-draft";
+import { useDraft, preferredDraftDeployment } from "../hooks/use-draft";
 import { useState } from "react";
 import { useAccount, useChains } from "wagmi";
 import { zeroAddress } from "viem";
@@ -19,7 +19,13 @@ import { TokenSelector, TokenNotice } from "@/features/tokens";
 import { useTokenState } from "@/infrastructure/chain/token-state";
 
 export function CreateTrade() {
-  const [chainId, setChainId] = useState(deployments[0]?.chainId ?? 100);
+  const [chainId, setChainId] = useState(
+    () =>
+      deployments.find((entry) => entry.id === preferredDraftDeployment())
+        ?.chainId ??
+      deployments[0]?.chainId ??
+      100,
+  );
   const chains = useChains();
   const deployment = deployments.find((item) => item.chainId === chainId);
   return (
@@ -68,6 +74,7 @@ function CreationForm({
     draft,
     update: saveDraft,
     error: storageError,
+    revision,
   } = useDraft(deployment.id);
   const [picker, setPicker] = useState<"makerToken" | "takerToken">();
   const [error, setError] = useState("");
@@ -144,7 +151,7 @@ function CreationForm({
         <p>Duration: {draft.duration}</p>
         <p>The expiration deadline will be set when you request a signature.</p>
         {(!terms || !freshDecimals) && <p role="alert">{validationError}</p>}
-        {terms && send.decimals.isSuccess && (
+        {terms && send.decimals.isSuccess && receive.decimals.isSuccess && (
           <CreationReadiness
             deployment={deployment}
             maker={terms.maker}
@@ -152,6 +159,9 @@ function CreationForm({
             amount={terms.makerAmount}
             decimals={send.decimals.data}
             ready={freshDecimals}
+            draft={draft}
+            revision={revision}
+            takerDecimals={receive.decimals.data}
           />
         )}
         <Button

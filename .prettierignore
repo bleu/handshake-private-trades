@@ -2,6 +2,7 @@
 .tools/
 node_modules/
 web/.next/
+web/.next-e2e/
 web/next-env.d.ts
 contracts/
 broadcast/

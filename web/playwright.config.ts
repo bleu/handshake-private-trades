@@ -12,6 +12,7 @@ export default defineConfig({
     url: "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
     env: {
+      PTL_E2E: "true",
       NEXT_PUBLIC_ENABLE_ANVIL: "true",
       NEXT_PUBLIC_GNOSIS_SETTLEMENT_ADDRESS:
         "0x0000000000000000000000000000000000001000",

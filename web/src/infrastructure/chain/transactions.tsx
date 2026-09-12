@@ -10,6 +10,19 @@ import { useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Address, Hash } from "viem";
+import type { CreationDraft, SignedOrderLink } from "@/domain/orders";
+export type SignedResult = {
+  url: string;
+  signed: SignedOrderLink;
+  draft: CreationDraft;
+  expired: boolean;
+  warning?: string;
+};
+type SignatureRequest = {
+  chainId: number;
+  account: Address;
+  execute: (awaitingWallet: () => void) => Promise<SignedResult>;
+};
 
 type Transaction = {
   label: string;
@@ -33,6 +46,8 @@ type Transactions = {
   activity: Transaction | undefined;
   busy: boolean;
   run: (request: Request) => Promise<void>;
+  sign: (request: SignatureRequest) => Promise<SignedResult | undefined>;
+  signedResult: SignedResult | undefined;
 };
 const Context = createContext<Transactions | null>(null);
 export function TransactionProvider({ children }: { children: ReactNode }) {
@@ -40,6 +55,48 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient();
   const [activity, setActivity] = useState<Transaction>();
   const locked = useRef(false);
+  const [signedResult, setSignedResult] = useState<SignedResult>();
+  const sign = async (request: SignatureRequest) => {
+    if (locked.current) return;
+    locked.current = true;
+    const current: Transaction = {
+      label: "Signature",
+      chainId: request.chainId,
+      account: request.account,
+      phase: "checking",
+      message: "Checking signature readiness…",
+    };
+    setActivity(current);
+    try {
+      const result = await request.execute(() => {
+        setActivity({
+          ...current,
+          phase: "awaiting-wallet",
+          message: "Awaiting wallet: signature.",
+        });
+      });
+      setSignedResult(result);
+      setActivity({
+        ...current,
+        phase: "confirmed",
+        message: result.expired
+          ? "Signature returned after expiration. The signed link is retained."
+          : "Order signed.",
+      });
+      return result;
+    } catch (error) {
+      setActivity({
+        ...current,
+        phase: "failed",
+        message:
+          error instanceof ActionError
+            ? error.message
+            : "Signature failed or was rejected. Review the terms and retry.",
+      });
+    } finally {
+      locked.current = false;
+    }
+  };
   const run = async (request: Request) => {
     if (locked.current) return;
     locked.current = true;
@@ -101,7 +158,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     activity !== undefined &&
     ["checking", "awaiting-wallet", "pending"].includes(activity.phase);
   return (
-    <Context.Provider value={{ activity, busy, run }}>
+    <Context.Provider value={{ activity, busy, run, sign, signedResult }}>
       {children}
     </Context.Provider>
   );
