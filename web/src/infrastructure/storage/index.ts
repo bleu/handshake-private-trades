@@ -2,6 +2,10 @@ import { z } from "zod";
 import { zeroAddress } from "viem";
 import {
   addressSchema,
+  decodeOrderLink,
+  orderId,
+  type LinkDeployment,
+  type SignedOrderLink,
   creationDraftSchema,
 } from "../../domain/orders/index.ts";
 
@@ -30,11 +34,96 @@ export type SavedDraft = z.infer<typeof draftRecordSchema>;
 const draftKey = (deploymentId: number) =>
   `ptl:draft:${String(deploymentIdSchema.parse(deploymentId))}`;
 
+export type StoredOrder = {
+  payload: string;
+  orderId: `0x${string}`;
+  signed: SignedOrderLink;
+};
+const historyRecordSchema = z.strictObject({
+  version: z.literal(1),
+  payload: z.string(),
+});
+const historyPrefix = (maker: string, deploymentId: number) =>
+  `ptl:history:${String(deploymentIdSchema.parse(deploymentId))}:${addressSchema.parse(maker).toLowerCase()}:`;
+async function verifiedEntry(
+  payload: string,
+  registry: readonly LinkDeployment[],
+): Promise<StoredOrder> {
+  const signed = await decodeOrderLink(payload, registry);
+  const deployment = registry.find((entry) => entry.id === signed.deploymentId);
+  if (!deployment) throw new Error("Unsupported deployment.");
+  return { payload, orderId: orderId(signed.order, deployment.domain), signed };
+}
+
 export function createStorageAdapter(
   getStorage: () => StoragePort,
   onChange: () => void = () => {},
 ) {
   return {
+    async saveOrder(
+      payload: string,
+      maker: string,
+      registry: readonly LinkDeployment[],
+    ) {
+      const entry = await verifiedEntry(payload, registry);
+      if (addressSchema.parse(maker) !== entry.signed.order.maker)
+        throw new Error("Only the maker can restore this order to history.");
+      const key =
+        historyPrefix(maker, entry.signed.deploymentId) + entry.orderId;
+      try {
+        getStorage().setItem(key, JSON.stringify({ version: 1, payload }));
+        onChange();
+        return { ok: true as const, entry, url: `/trade#${payload}` };
+      } catch {
+        return {
+          ok: false as const,
+          entry,
+          url: `/trade#${payload}`,
+          error:
+            "Order history could not be saved. Keep this link; clearing storage does not cancel an order.",
+        };
+      }
+    },
+    async readOrders(
+      maker: string,
+      deploymentId: number,
+      registry: readonly LinkDeployment[],
+    ): Promise<ReadResult<StoredOrder[]>> {
+      const value: StoredOrder[] = [];
+      let error: string | undefined;
+      try {
+        const storage = getStorage();
+        const prefix = historyPrefix(maker, deploymentId);
+        const records: { key: string; raw: string | null }[] = [];
+        for (let index = 0; index < storage.length; index++) {
+          const key = storage.key(index);
+          if (key?.startsWith(prefix))
+            records.push({ key, raw: storage.getItem(key) });
+        }
+        for (const { key, raw } of records) {
+          try {
+            const record = historyRecordSchema.parse(JSON.parse(raw ?? "null"));
+            const entry = await verifiedEntry(record.payload, registry);
+            if (
+              key !==
+              historyPrefix(
+                entry.signed.order.maker,
+                entry.signed.deploymentId,
+              ) +
+                entry.orderId
+            )
+              throw new Error("Mismatched order identity.");
+            value.push(entry);
+          } catch {
+            error =
+              "Some saved orders are corrupt or unsupported and could not be loaded.";
+          }
+        }
+      } catch {
+        error = "Saved order history is unavailable.";
+      }
+      return { value, ...(error ? { error } : {}) };
+    },
     saveDraft(
       deploymentId: number,
       input: z.input<typeof creationDraftSchema>,
