@@ -33,7 +33,7 @@ The Solidity workspace exposes the immutable order hash and status interface.
 Settlement and maker-only individual cancellation are implemented.
 `npm run test:contracts` runs public-interface Foundry tests, including independent
 reference digests in `fixtures/order-hashes.json`; tests are included in `check`.
-No public deployment is available. ABI consistency joins the gates when exported.
+No public deployment is available. Generated ABI consistency is part of `npm run check`.
 
 Vendor/generated output is excluded narrowly from formatting/linting. Frontend dependencies' declarations use
 TypeScript's standard `skipLibCheck`; maintained source remains strictly checked.
@@ -67,10 +67,10 @@ constructor visibility; ordinary function visibility remains enforced.
 ## Wallet shell
 
 The browser-only shell uses RainbowKit, wagmi, and TanStack Query. Routes `/`,
-`/trade`, and `/history` are placeholders; shared providers stay mounted when
+`/trade`, and `/history` support creation, received links, and maker history; shared providers stay mounted when
 navigating. Only Gnosis is available in production. Set
 `NEXT_PUBLIC_ENABLE_ANVIL=true` with `npm run dev` to also offer local chain 31337;
-a production build rejects that setting. Wallet connection does not enable trading.
+a production build rejects that setting. Trading requires a configured settlement and current prerequisite reads.
 
 Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` to your 32-character project ID from
 [Reown Dashboard](https://dashboard.reown.com/), and allow your application's origin.
@@ -110,7 +110,7 @@ Import order operations through `web/src/domain/orders/index.ts`. This pure modu
 
 The token explorer uses CoW's [official default list](https://github.com/cowprotocol/token-lists), fetched directly from `https://files.cow.fi/tokens/CowSwap.json` with SWR and keyed by source/network. Its current browser CORS response was verified. List names, symbols, and HTTPS logos provide discovery metadata; addresses remain visible. Failed lists show unknown membership or explicitly stale cached data. Missing metadata and failed logos fall back to addresses/placeholders.
 
-Wagmi owns direct ERC-20 decimals, balances, and settlement allowances, scoped by chain, token, account and configured spender. Reads refresh every 15 seconds, on focus/mount, and with Refresh token data. List decimals are validated but discarded before reaching selection; unreadable or failed revalidated onchain decimals disable Use token. Balances/allowances are unavailable while disconnected, unreadable, or lacking a configured settlement. These are selection controls only; custom imports and trade creation are later tickets.
+Wagmi owns direct ERC-20 decimals, balances, and settlement allowances, scoped by chain, token, account and configured spender. Reads refresh every 15 seconds, on focus/mount, and with Refresh token data. List decimals are validated but discarded before reaching selection; unreadable or failed revalidated onchain decimals disable Use token. Balances/allowances are unavailable while disconnected, unreadable, or lacking a configured settlement. Custom imports and trade creation use the same onchain metadata and readiness checks.
 
 Before browser tests, start Anvil in a separate terminal, then `npm run local:reset && npm run local:deploy`. Run `npm run test:e2e` (or `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` for installed Chrome). The suite includes real local token reads and controlled HTTP/RPC/wallet failure cases. Playwright uses `.next-e2e/` so its generated output does not lock an ordinary development server. It supplies a synthetic Gnosis address for RPC fixtures only; it never sends public transactions. CI starts/deploys Anvil before these tests. Tests use browser boundary fixtures rather than replacing SWR or wagmi internals.
 
@@ -121,3 +121,7 @@ RainbowKit 2.2.11 directly reads optional wallet caches from browser storage. `n
 Transaction feedback follows the original chain/account across route and wallet changes and retains original/replacement hashes. A wallet cancellation does not cancel an order. Submitted transactions are never automatically resubmitted. Receipt failures remain pending/rechecking; observed receipts are checked on focus and every 15 seconds during the session so a missing receipt removes false confirmation. Reloading clears this transient activity: reopen the retained trade link to read current onchain state. Maker history stores signed orders, not pending transaction receipts; there is no persisted taker activity.
 
 The [automated acceptance matrix](docs/verification.md) maps requirements to public-seam tests and records the browser/viewport evidence and remaining manual-wallet checks.
+
+The [release runbook](docs/release.md) documents clean-checkout verification,
+`npm run release:bundle`, public configuration, artifact/source verification, and
+the pending manual-wallet and release-approval checklist.

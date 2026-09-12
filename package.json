@@ -32,7 +32,8 @@
     "test:unit": "npm run test:unit -w web",
     "postinstall": "node scripts/patch-wallet-cache.mjs",
     "wallet-cache:patch": "node scripts/patch-wallet-cache.mjs",
-    "wallet-cache:check": "node scripts/patch-wallet-cache.mjs --check"
+    "wallet-cache:check": "node scripts/patch-wallet-cache.mjs --check",
+    "release:bundle": "node scripts/release-bundle.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
