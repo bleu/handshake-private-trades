@@ -18,7 +18,7 @@ export function TokenLogo({
       <span
         role="img"
         aria-label="Token logo unavailable"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100"
+        className="inline-flex h-8 w-8 items-center justify-center token-logo-fallback rounded-full"
       >
         ?
       </span>
@@ -26,6 +26,7 @@ export function TokenLogo({
   return (
     <Image
       unoptimized
+      className="token-logo"
       src={source}
       alt={`${symbol} logo`}
       width={32}

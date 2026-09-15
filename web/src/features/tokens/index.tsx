@@ -1,4 +1,5 @@
 "use client";
+import { Select } from "@/components/ui/select";
 
 import { useState } from "react";
 import { useChains } from "wagmi";
@@ -13,7 +14,7 @@ export function TokenExplorer() {
   return (
     <div className="space-y-4">
       <label htmlFor="token-network">Token network</label>
-      <select
+      <Select
         id="token-network"
         className="block rounded border p-2"
         value={chainId}
@@ -27,11 +28,12 @@ export function TokenExplorer() {
             {chain.name}
           </option>
         ))}
-      </select>
+      </Select>
       <TokenSelector
         key={chainId}
         chainId={chainId}
         label="Token"
+        mode="inspect"
         onSelect={setSelected}
       />
       {selected && (
@@ -44,3 +46,6 @@ export function TokenExplorer() {
 }
 export { TokenSelector } from "./token-selector";
 export { TokenNotice } from "./token-notice";
+export { TokenIdentity } from "./token-identity";
+
+export { TokenBalance } from "./token-balance";

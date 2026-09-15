@@ -53,10 +53,19 @@ test("token discovery filters the CoW list by network and keeps addresses inspec
       .getByLabel("Token", { exact: true })
       .getByRole("option", { name: /OTHER/ }),
   ).toHaveCount(0);
-  await page.getByLabel("Token", { exact: true }).selectOption(token);
-  await expect(page.getByText(token, { exact: true })).toBeVisible();
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(token, "i") })
+    .click();
   await expect(
-    page.getByText("Six Decimal Token", { exact: true }),
+    page
+      .getByRole("region", { name: "Token details" })
+      .getByText(token, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Token details" })
+      .getByText("Six Decimal Token", { exact: true }),
   ).toBeVisible();
 });
 
@@ -77,7 +86,10 @@ test("selection uses fresh onchain decimals instead of the list's claimed precis
     });
   });
   await page.goto("/tokens");
-  await page.getByLabel("Token", { exact: true }).selectOption(token);
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(token, "i") })
+    .click();
   await expect(
     page.getByText("Decimals (onchain): 6", { exact: true }),
   ).toBeVisible();
@@ -107,7 +119,10 @@ test("unreadable decimals block selection until a fresh read succeeds, including
     });
   });
   await page.goto("/tokens");
-  await page.getByLabel("Token", { exact: true }).selectOption(token);
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(token, "i") })
+    .click();
   await expect(
     page.getByText("Decimals unavailable. This token cannot be used.", {
       exact: true,
@@ -162,7 +177,10 @@ test("balances and allowances use exact onchain scaling and refresh for the conn
   await page
     .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
     .click();
-  await page.getByLabel("Token", { exact: true }).selectOption(token);
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(token, "i") })
+    .click();
   await expect(
     page.getByText("Balance: 1.234567 SIX", { exact: true }),
   ).toBeVisible();
@@ -254,15 +272,33 @@ test("listed logos are shown and missing metadata or broken logos use address fa
     route.fulfill({ status: 404 }),
   );
   await page.goto("/tokens");
-  await page.getByLabel("Token", { exact: true }).selectOption(token);
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(token, "i") })
+    .click();
   await expect(
-    page.getByRole("img", { name: "SIX logo", exact: true }),
+    page
+      .getByRole("region", { name: "Token details" })
+      .getByRole("img", { name: "SIX logo", exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Token", { exact: true }).selectOption(other);
-  await expect(page.getByText(other, { exact: true })).toBeVisible();
-  await expect(page.getByText("0x2222…2222", { exact: true })).toBeVisible();
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(other, "i") })
+    .click();
   await expect(
-    page.getByRole("img", { name: "Token logo unavailable", exact: true }),
+    page
+      .getByRole("region", { name: "Token details" })
+      .getByText(other, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Token details" })
+      .getByText("0x2222…2222", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Token details" })
+      .getByRole("img", { name: "Token logo unavailable", exact: true }),
   ).toBeVisible();
 });
 
@@ -299,7 +335,10 @@ test("network selection scopes the list and reads real Anvil token state indepen
       .getByLabel("Token", { exact: true })
       .getByRole("option", { name: /SIX/ }),
   ).toHaveCount(0);
-  await page.getByLabel("Token", { exact: true }).selectOption(localToken);
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(localToken, "i") })
+    .click();
   await expect(
     page.getByText("Decimals (onchain): 6", { exact: true }),
   ).toBeVisible();
@@ -339,7 +378,7 @@ test("a malformed list never supplies token options", async ({ page }) => {
   ).toBeVisible();
   await expect(
     page.getByLabel("Token", { exact: true }).getByRole("option"),
-  ).toHaveCount(1);
+  ).toHaveCount(0);
 });
 
 test("failed decimal revalidation does not reuse previously successful scaling", async ({
@@ -362,7 +401,10 @@ test("failed decimal revalidation does not reuse previously successful scaling",
     });
   });
   await page.goto("/tokens");
-  await page.getByLabel("Token", { exact: true }).selectOption(token);
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(token, "i") })
+    .click();
   await expect(page.getByRole("button", { name: "Use token" })).toBeEnabled();
   healthy = false;
   await page.getByRole("button", { name: "Refresh token data" }).click();
@@ -408,11 +450,55 @@ test("out-of-range decimals returned by a token are unusable", async ({
     });
   });
   await page.goto("/tokens");
-  await page.getByLabel("Token", { exact: true }).selectOption(token);
+  await page
+    .getByLabel("Token", { exact: true })
+    .getByRole("option", { name: new RegExp(token, "i") })
+    .click();
   await expect(
     page.getByText("Decimals unavailable. This token cannot be used.", {
       exact: true,
     }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Use token" })).toBeDisabled();
+});
+
+test("token search narrows the available network tokens by symbol and address", async ({
+  page,
+}) => {
+  await page.route("https://files.cow.fi/tokens/CowSwap.json", (route) =>
+    route.fulfill({ json: list }),
+  );
+  await page.goto("/tokens");
+  await expect(page.getByLabel("Search tokens", { exact: true })).toBeVisible();
+  await page.getByLabel("Search tokens", { exact: true }).fill("missing");
+  await expect(
+    page.getByLabel("Token", { exact: true }).getByRole("option"),
+  ).toHaveCount(0);
+  await page.getByLabel("Search tokens", { exact: true }).fill("six");
+  await expect(
+    page
+      .getByLabel("Token", { exact: true })
+      .getByRole("option", { name: /SIX/ }),
+  ).toHaveCount(1);
+});
+
+test("an outside-whitelist warning links to the full contract on its own network", async ({
+  page,
+}) => {
+  await page.route("https://files.cow.fi/tokens/CowSwap.json", (route) =>
+    route.fulfill({ json: { ...list, tokens: [] } }),
+  );
+  await page.goto("/tokens");
+  if (!(await page.getByLabel("Token address", { exact: true }).isVisible()))
+    await page
+      .getByRole("button", { name: "Import token", exact: true })
+      .click();
+  await page.getByLabel("Token address", { exact: true }).fill(token);
+  await page
+    .getByRole("button", { name: "Import information", exact: true })
+    .click();
+  await page.getByText("Outside whitelist", { exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: token, exact: true }),
+  ).toHaveAttribute("href", `https://gnosisscan.io/address/${token}`);
 });

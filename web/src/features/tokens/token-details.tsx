@@ -1,7 +1,10 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
+import { Notice } from "@/components/ui/notice";
 import { useState } from "react";
 import { browserStorage } from "@/infrastructure/storage";
+import { TokenWarning } from "./token-warning";
 import { TokenLogo } from "./token-logo";
 import { Button } from "@/components/ui/button";
 import { formatAmount } from "@/domain/orders";
@@ -13,7 +16,11 @@ export function TokenDetails({
   onSelect,
   membership = "listed",
   canImport = false,
+  onSaved,
+  selection = true,
 }: {
+  onSaved?: (token: ListedToken) => void;
+  selection?: boolean;
   membership?: "listed" | "unlisted" | "unknown";
   canImport?: boolean;
   token: ListedToken;
@@ -30,7 +37,8 @@ export function TokenDetails({
     symbol: chainSymbol,
   } = useTokenState(token.chainId, token.address, membership !== "listed");
   const [saved, setSaved] = useState("");
-  const readable = decimals.isSuccess && !decimals.isFetching;
+  const [saveAttempt, setSaveAttempt] = useState(0);
+  const readable = decimals.isSuccess;
   const fallback = `${token.address.slice(0, 6)}…${token.address.slice(-4)}`;
   const symbol =
     token.symbol?.trim() ||
@@ -39,33 +47,41 @@ export function TokenDetails({
   const displayName =
     token.name?.trim() || (name.isSuccess && name.data.trim()) || fallback;
   return (
-    <div className="space-y-2">
+    <div role="region" aria-label="Token details" className="space-y-2">
       <TokenLogo key={token.logoURI} source={token.logoURI} symbol={symbol} />
       <p>{displayName}</p>
-      {membership !== "listed" && (
-        <p role="note">
-          {membership === "unknown"
-            ? "List membership unknown."
-            : "Unlisted token."}{" "}
-          Verify the address. Fee-on-transfer tokens are unsupported; received
-          amounts are not guaranteed.
-        </p>
-      )}
+      <TokenWarning
+        membership={membership}
+        chainId={token.chainId}
+        address={token.address}
+        name={displayName}
+        symbol={symbol}
+      />
       {canImport && (
         <Button
+          className="token-import-submit"
           disabled={!readable}
           onClick={() => {
+            setSaveAttempt((attempt) => attempt + 1);
             const result = browserStorage.saveImport(token);
             setSaved(result.ok ? "Import saved." : result.error);
+            if (result.ok) onSaved?.({ ...token, name: displayName, symbol });
           }}
         >
-          Save import
+          Save
         </Button>
       )}
-      {saved && <p role="status">{saved}</p>}
+      {saved && (
+        <Notice
+          key={saveAttempt}
+          kind={saved === "Import saved." ? "success" : "error"}
+        >
+          <p>{saved}</p>
+        </Notice>
+      )}
       <p className="break-all font-mono text-sm">{token.address}</p>
       {readable && <p>Decimals (onchain): {decimals.data}</p>}
-      {decimals.isFetching && <p role="status">Reading token decimals…</p>}
+      {decimals.isPending && <Spinner label="Reading token decimals" />}
       {decimals.isError && (
         <p role="alert">Decimals unavailable. This token cannot be used.</p>
       )}
@@ -74,16 +90,13 @@ export function TokenDetails({
         <>
           <p>
             Balance:{" "}
-            {readable && balance.isSuccess && !balance.isFetching
+            {readable && balance.isSuccess
               ? `${formatAmount(balance.data, decimals.data)} ${symbol}`
               : "Unavailable"}
           </p>
           <p>
             Allowance:{" "}
-            {readable &&
-            deployment &&
-            allowance.isSuccess &&
-            !allowance.isFetching
+            {readable && deployment && allowance.isSuccess
               ? `${formatAmount(allowance.data, decimals.data)} ${symbol}`
               : "Unavailable"}
           </p>
@@ -104,14 +117,17 @@ export function TokenDetails({
         >
           Refresh token data
         </Button>
-        <Button
-          disabled={!readable}
-          onClick={() => {
-            onSelect({ ...token, name: displayName, symbol });
-          }}
-        >
-          Use token
-        </Button>
+        {selection && (
+          <Button
+            className="token-import-submit"
+            disabled={!readable}
+            onClick={() => {
+              onSelect({ ...token, name: displayName, symbol });
+            }}
+          >
+            Use token
+          </Button>
+        )}
       </div>
     </div>
   );
