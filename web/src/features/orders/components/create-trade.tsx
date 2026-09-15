@@ -1,9 +1,14 @@
 "use client";
+import { Select } from "@/components/ui/select";
 
+import { Icon } from "@/components/ui/icon";
+import { Tooltip } from "@/components/ui/tooltip";
+import { Dialog } from "@/components/ui/dialog";
+import { OrderReceipt } from "./order-receipt";
 import { CreationReadiness } from "./creation-readiness";
-import { useDraft, preferredDraftDeployment } from "../hooks/use-draft";
+import { useDraft } from "../hooks/use-draft";
 import { useState } from "react";
-import { useAccount, useChains } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import { zeroAddress } from "viem";
 import { Button } from "@/components/ui/button";
 import { deployments, type Deployment } from "@/config/deployments";
@@ -15,89 +20,60 @@ import {
   formatAmount,
   type CreationDraft,
 } from "@/domain/orders";
-import { TokenSelector, TokenNotice } from "@/features/tokens";
+import {
+  TokenSelector,
+  TokenNotice,
+  TokenIdentity,
+  TokenBalance,
+} from "@/features/tokens";
+import { useTransactions } from "@/infrastructure/chain/transactions";
 import { useTokenState } from "@/infrastructure/chain/token-state";
 
 export function CreateTrade() {
-  const [chainId, setChainId] = useState(
-    () =>
-      deployments.find((entry) => entry.id === preferredDraftDeployment())
-        ?.chainId ??
-      deployments[0]?.chainId ??
-      100,
-  );
-  const chains = useChains();
+  const chainId = useChainId();
   const deployment = deployments.find((item) => item.chainId === chainId);
   return (
     <div className="space-y-4">
-      <h1>Create a trade</h1>
-      <label className="block">
-        Trade network
-        <select
-          className="ml-2 rounded border p-2"
-          value={chainId}
-          onChange={(event) => {
-            setChainId(Number(event.target.value) as 100 | 31337);
-          }}
-        >
-          {chains.map((chain) => (
-            <option key={chain.id} value={chain.id}>
-              {chain.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {deployment ? (
-        <CreationForm
-          key={deployment.id}
-          deployment={deployment}
-          network={
-            chains.find((chain) => chain.id === chainId)?.name ??
-            String(chainId)
-          }
-        />
-      ) : (
-        <p role="alert">Trading is not configured on this network.</p>
-      )}
+      <CreationForm key={chainId} chainId={chainId} deployment={deployment} />
     </div>
   );
 }
 
 function CreationForm({
   deployment,
-  network,
+  chainId,
 }: {
-  deployment: Deployment;
-  network: string;
+  deployment: Deployment | undefined;
+  chainId: number;
 }) {
   const {
     draft,
     update: saveDraft,
     error: storageError,
     revision,
-  } = useDraft(deployment.id);
+  } = useDraft(chainId === 100 ? 1 : 2);
+  const { busy } = useTransactions();
+  const [importingToken, setImportingToken] = useState(false);
   const [picker, setPicker] = useState<"makerToken" | "takerToken">();
+  const [specificWallet, setSpecificWallet] = useState(false);
+  const restricted = specificWallet || !!draft.restrictedTaker;
   const [error, setError] = useState("");
   const { address: maker } = useAccount();
   const makerAddress = addressSchema.safeParse(draft.makerToken);
   const takerAddress = addressSchema.safeParse(draft.takerToken);
   const send = useTokenState(
-    deployment.chainId,
+    chainId,
     makerAddress.success ? makerAddress.data : undefined,
   );
   const receive = useTokenState(
-    deployment.chainId,
+    chainId,
     takerAddress.success ? takerAddress.data : undefined,
   );
   const update = (change: Partial<CreationDraft>) => {
     saveDraft(change);
     setError("");
   };
-  const freshDecimals =
-    send.decimals.isSuccess &&
-    !send.decimals.isFetching &&
-    receive.decimals.isSuccess &&
-    !receive.decimals.isFetching;
+  const freshDecimals = send.decimals.isSuccess && receive.decimals.isSuccess;
   let terms: ReturnType<typeof validateCreation> | undefined;
   let validationError = "Connect a wallet to review your trade.";
   if (maker) {
@@ -117,150 +93,304 @@ function CreationForm({
       validationError =
         "Select both tokens and wait for fresh onchain decimals.";
   }
-  if (terms && !freshDecimals)
-    validationError = "Refreshing token decimals. Wait before continuing.";
-  if (draft.stage === "review")
+  if (
+    restricted &&
+    (!draft.restrictedTaker.trim() ||
+      draft.restrictedTaker.trim() === zeroAddress)
+  ) {
+    terms = undefined;
+    validationError = "Enter a nonzero counterparty address.";
+  }
+  const insufficientBalance =
+    !!terms && send.balance.isSuccess && send.balance.data < terms.makerAmount;
+  const balanceUnavailable = !!terms && !send.balance.isSuccess;
+  const editReady =
+    !!deployment &&
+    !!terms &&
+    freshDecimals &&
+    !insufficientBalance &&
+    !balanceUnavailable;
+  const incomplete =
+    (restricted && !draft.restrictedTaker.trim()) ||
+    !draft.makerToken.trim() ||
+    !draft.takerToken.trim() ||
+    !draft.makerAmount.trim() ||
+    !draft.takerAmount.trim();
+  const editError = !deployment
+    ? "Trading is not configured on this network."
+    : incomplete
+      ? "Fill all the inputs"
+      : insufficientBalance
+        ? "Insufficient send-token balance."
+        : balanceUnavailable
+          ? send.balance.isError
+            ? "Send-token balance unavailable."
+            : "Review trade"
+          : !freshDecimals
+            ? send.decimals.isError || receive.decimals.isError
+              ? "Token decimals unavailable."
+              : "Review trade"
+            : validationError;
+  if (draft.stage === "review" && deployment)
     return (
-      <section className="space-y-3">
-        <h2>Review trade</h2>
-        {storageError && <p role="alert">{storageError}</p>}
-        <p>Network: {network}</p>
-        <p className="break-all">Maker: {maker ?? "Connect your wallet"}</p>
-        <p>
-          You send:{" "}
-          {terms && send.decimals.isSuccess
-            ? formatAmount(terms.makerAmount, send.decimals.data)
-            : draft.makerAmount}
-        </p>
-        <p className="break-all">Token sent: {draft.makerToken}</p>
-        <TokenNotice chainId={deployment.chainId} address={draft.makerToken} />
-        <p>
-          You receive:{" "}
-          {terms && receive.decimals.isSuccess
-            ? formatAmount(terms.takerAmount, receive.decimals.data)
-            : draft.takerAmount}
-        </p>
-        <p className="break-all">Token received: {draft.takerToken}</p>
-        <TokenNotice chainId={deployment.chainId} address={draft.takerToken} />
-        <p className="break-all">
-          Restricted taker: {draft.restrictedTaker || "None"}
-        </p>
-        {(!draft.restrictedTaker || terms?.restrictedTaker === zeroAddress) && (
-          <p>Anyone can accept this order. The first successful trade wins.</p>
-        )}
-        <p>Duration: {draft.duration}</p>
-        <p>The expiration deadline will be set when you request a signature.</p>
-        {(!terms || !freshDecimals) && <p role="alert">{validationError}</p>}
-        {terms && send.decimals.isSuccess && receive.decimals.isSuccess && (
-          <CreationReadiness
-            deployment={deployment}
-            maker={terms.maker}
-            token={terms.makerToken}
-            amount={terms.makerAmount}
-            decimals={send.decimals.data}
-            ready={freshDecimals}
-            draft={draft}
-            revision={revision}
-            takerDecimals={receive.decimals.data}
-          />
-        )}
-        <Button
-          onClick={() => {
-            update({ stage: "edit" });
-          }}
-        >
-          Edit terms
-        </Button>
-      </section>
-    );
-  return (
-    <section className="space-y-4">
-      {storageError && <p role="alert">{storageError}</p>}
-      {(
-        [
-          ["makerToken", "Send"],
-          ["takerToken", "Receive"],
-        ] as const
-      ).map(([field, label]) => (
-        <div key={field} className="space-y-2">
+      <>
+        <h1>Review order</h1>
+        <section className="create-review space-y-3">
+          {storageError && <p role="alert">{storageError}</p>}
+          {terms && <OrderReceipt chainId={chainId} order={terms} />}
+          <dl className="order-facts">
+            <div>
+              <dt>Counterparty</dt>
+              <dd>{draft.restrictedTaker || "Anyone with the link"}</dd>
+            </div>
+            <div>
+              <dt>
+                Expires after{" "}
+                <Tooltip
+                  label="About expiration"
+                  text="The expiration deadline is set when you request a signature."
+                />
+              </dt>
+              <dd>{draft.duration}</dd>
+            </div>
+          </dl>
+          <TokenNotice chainId={chainId} address={draft.makerToken} />
+          <TokenNotice chainId={chainId} address={draft.takerToken} />
+          {!busy && !terms && freshDecimals && (
+            <p role="alert">{validationError}</p>
+          )}
+          {!busy && (send.decimals.isError || receive.decimals.isError) && (
+            <p role="alert">Token decimals unavailable.</p>
+          )}
+          {!freshDecimals && <Button disabled>Review trade</Button>}
+          {terms && send.decimals.isSuccess && receive.decimals.isSuccess && (
+            <CreationReadiness
+              deployment={deployment}
+              maker={terms.maker}
+              token={terms.makerToken}
+              amount={terms.makerAmount}
+              decimals={send.decimals.data}
+              ready={freshDecimals}
+              draft={draft}
+              revision={revision}
+              takerDecimals={receive.decimals.data}
+            />
+          )}
           <Button
+            className="text-action"
             onClick={() => {
-              setPicker(field);
+              update({ stage: "edit" });
             }}
           >
-            Choose {label} token
+            Edit terms
           </Button>
-          {draft[field] && (
-            <p className="break-all">
-              {label} token: {draft[field]}
-            </p>
-          )}
-          <label className="block">
-            {label} amount
+        </section>
+      </>
+    );
+  return (
+    <>
+      <h1 className="create-heading">Create an order</h1>
+      <section className="create-panel">
+        <h2>Set your trade</h2>
+        {storageError && <p role="alert">{storageError}</p>}
+        {(
+          [
+            ["makerToken", "Send"],
+            ["takerToken", "Receive"],
+          ] as const
+        ).map(([field, label]) => {
+          return (
+            <div
+              key={field}
+              className={`amount-card ${field === "takerToken" ? "receive-card" : ""}`}
+            >
+              <div className="amount-label">You {label.toLowerCase()}</div>
+              <div className="amount-row">
+                <label className="amount-value">
+                  <input
+                    className="ml-2 rounded border p-2"
+                    inputMode="decimal"
+                    aria-label={`${label} amount`}
+                    placeholder="0"
+                    value={
+                      draft[
+                        field === "makerToken" ? "makerAmount" : "takerAmount"
+                      ]
+                    }
+                    onChange={(event) => {
+                      update({
+                        [field === "makerToken"
+                          ? "makerAmount"
+                          : "takerAmount"]: event.target.value,
+                      });
+                    }}
+                  />
+                </label>
+                <Button
+                  aria-label={`Choose ${label} token`}
+                  onClick={() => {
+                    setImportingToken(false);
+                    setPicker(field);
+                  }}
+                >
+                  {draft[field] ? (
+                    <TokenIdentity chainId={chainId} address={draft[field]} />
+                  ) : (
+                    "Select token"
+                  )}
+                  <Icon name="chevron-down" />
+                </Button>
+              </div>
+              <div className="amount-footer">
+                {draft[field] && (
+                  <TokenNotice chainId={chainId} address={draft[field]} />
+                )}
+                <TokenBalance
+                  chainId={chainId}
+                  address={
+                    field === "makerToken"
+                      ? makerAddress.success
+                        ? makerAddress.data
+                        : undefined
+                      : takerAddress.success
+                        ? takerAddress.data
+                        : undefined
+                  }
+                />
+                {field === "makerToken" && (
+                  <Button
+                    disabled={
+                      !send.balance.isSuccess || !send.decimals.isSuccess
+                    }
+                    onClick={() => {
+                      if (send.balance.isSuccess && send.decimals.isSuccess)
+                        update({
+                          makerAmount: formatAmount(
+                            send.balance.data,
+                            send.decimals.data,
+                          ),
+                        });
+                    }}
+                  >
+                    Max
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {picker && (
+          <Dialog
+            title={importingToken ? "Import token" : "Select token"}
+            back={
+              importingToken ? (
+                <Button
+                  aria-label="Back to tokens"
+                  onClick={() => {
+                    setImportingToken(false);
+                  }}
+                >
+                  <Icon name="arrow-left" />
+                </Button>
+              ) : undefined
+            }
+            onClose={() => {
+              setPicker(undefined);
+            }}
+          >
+            <TokenSelector
+              key={picker}
+              chainId={chainId}
+              label="Token"
+              onImportView={setImportingToken}
+              importView={importingToken}
+              onSelect={(token) => {
+                update({ [picker]: token.address });
+                setPicker(undefined);
+              }}
+            />
+          </Dialog>
+        )}
+        <div className="counterparty-heading">
+          <h3>
+            Who can accept?{" "}
+            <Tooltip
+              label="About counterparties"
+              text="Only the specified wallet can accept a restricted order. Anyone with an unrestricted link can accept; the first successful trade wins. Both token transfers happen together."
+            />
+          </h3>
+          <span>Counterparty</span>
+        </div>
+        <div
+          className="counterparty-options"
+          role="group"
+          aria-label="Counterparty"
+        >
+          <Button
+            aria-pressed={restricted}
+            onClick={() => {
+              setSpecificWallet(true);
+            }}
+          >
+            Specific wallet
+          </Button>
+          <Button
+            aria-pressed={!restricted}
+            onClick={() => {
+              setSpecificWallet(false);
+              update({ restrictedTaker: "" });
+            }}
+          >
+            Anyone with the link
+          </Button>
+        </div>
+        {restricted && (
+          <label className="counterparty-address">
+            Counterparty address
             <input
-              className="ml-2 rounded border p-2"
-              inputMode="decimal"
-              value={
-                draft[field === "makerToken" ? "makerAmount" : "takerAmount"]
-              }
+              className="mt-1 block w-full rounded border p-2"
+              value={draft.restrictedTaker}
               onChange={(event) => {
-                update({
-                  [field === "makerToken" ? "makerAmount" : "takerAmount"]:
-                    event.target.value,
-                });
+                update({ restrictedTaker: event.target.value });
               }}
             />
           </label>
-        </div>
-      ))}
-      {picker && (
-        <TokenSelector
-          key={picker}
-          chainId={deployment.chainId}
-          label="Token"
-          onSelect={(token) => {
-            update({ [picker]: token.address });
-            setPicker(undefined);
-          }}
-        />
-      )}
-      <label className="block">
-        Restricted taker (optional)
-        <input
-          className="mt-1 block w-full rounded border p-2"
-          value={draft.restrictedTaker}
-          onChange={(event) => {
-            update({ restrictedTaker: event.target.value });
-          }}
-        />
-      </label>
-      <label className="block">
-        Duration
-        <select
-          className="ml-2 rounded border p-2"
-          value={draft.duration}
-          onChange={(event) => {
-            update({
-              duration: creationDraftSchema.shape.duration.parse(
-                event.target.value,
-              ),
-            });
+        )}
+        <label className="expiry-field">
+          <span>Expires after</span>{" "}
+          <Tooltip
+            label="About expiration"
+            text="The expiration deadline is set when you request a signature."
+          />
+          <Select
+            aria-label="Duration"
+            className="ml-2 rounded border p-2"
+            value={draft.duration}
+            onChange={(event) => {
+              update({
+                duration: creationDraftSchema.shape.duration.parse(
+                  event.target.value,
+                ),
+              });
+            }}
+          >
+            {durationChoices.map((choice) => (
+              <option key={choice}>{choice}</option>
+            ))}
+          </Select>
+        </label>
+        {error && <p role="alert">{error}</p>}
+        <Button
+          className={`primary-action ${deployment && !incomplete && insufficientBalance ? "action-error" : ""}`}
+          disabled={!editReady}
+          onClick={() => {
+            if (editReady) update({ stage: "review" });
+            else setError(validationError);
           }}
         >
-          {durationChoices.map((choice) => (
-            <option key={choice}>{choice}</option>
-          ))}
-        </select>
-      </label>
-      {error && <p role="alert">{error}</p>}
-      <Button
-        onClick={() => {
-          if (terms && freshDecimals) update({ stage: "review" });
-          else setError(validationError);
-        }}
-      >
-        Review trade
-      </Button>
-    </section>
+          {editReady ? "Review trade" : editError}
+        </Button>
+      </section>
+    </>
   );
 }

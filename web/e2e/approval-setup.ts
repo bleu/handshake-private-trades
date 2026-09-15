@@ -1,3 +1,4 @@
+import { selectNetwork } from "./network-control";
 import type { Page } from "@playwright/test";
 import { erc20Abi } from "viem";
 import { createStorageAdapter } from "../src/infrastructure/storage";
@@ -60,6 +61,6 @@ export async function openApproval(
   await page
     .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
     .click();
-  await page.getByLabel("Trade network").selectOption("31337");
+  await selectNetwork(page, "31337");
   return token;
 }

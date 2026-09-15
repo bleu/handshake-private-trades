@@ -1,10 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useAccount, useSwitchChain } from "wagmi";
 import type { Address } from "viem";
 import type { Deployment } from "@/config/deployments";
 import { Button } from "@/components/ui/button";
-import type { approvalPlan, ApprovalInput, KnownOrder } from "@/domain/orders";
+import {
+  formatAmount,
+  type approvalPlan,
+  type ApprovalInput,
+  type KnownOrder,
+} from "@/domain/orders";
 import {
   useApproveToken,
   type ApprovalChoice,
@@ -31,6 +36,7 @@ export function ApprovalAction({
   viewed?: KnownOrder;
   ready?: boolean;
 }) {
+  const descriptionId = useId();
   const [choice, setChoice] = useState<ApprovalChoice>("necessary");
   const { chainId } = useAccount();
   const { switchChain } = useSwitchChain();
@@ -55,31 +61,26 @@ export function ApprovalAction({
       </Button>
     );
   return (
-    <fieldset className="space-y-2" disabled={busy || !ready}>
-      <legend>Approval amount</legend>
-      <label className="block">
+    <fieldset className="approval-choice" disabled={busy || !ready}>
+      <label className="approval-toggle">
+        <span>Max approval</span>
         <input
-          type="radio"
-          name="approval"
-          checked={choice === "necessary"}
-          onChange={() => {
-            setChoice("necessary");
-          }}
-          disabled={plan.exactTarget === undefined}
-        />{" "}
-        Approve just necessary
-      </label>
-      <label className="block">
-        <input
-          type="radio"
-          name="approval"
+          type="checkbox"
+          role="switch"
           checked={choice === "maximum"}
-          onChange={() => {
-            setChoice("maximum");
+          aria-describedby={descriptionId}
+          onChange={(event) => {
+            setChoice(event.target.checked ? "maximum" : "necessary");
           }}
-        />{" "}
-        Maximum approval
+        />
       </label>
+      <p id={descriptionId} className="approval-description">
+        {choice === "maximum"
+          ? "Allow unlimited spending of this token."
+          : plan.exactTarget !== undefined
+            ? `Allow spending up to ${formatAmount(plan.exactTarget, decimals)} tokens.`
+            : "Necessary approval unavailable."}
+      </p>
       <Button
         disabled={
           plan.balanceSufficient !== true ||

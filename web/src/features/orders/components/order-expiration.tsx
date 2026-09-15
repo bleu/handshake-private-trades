@@ -8,9 +8,9 @@ export function OrderExpiration({
   now: bigint;
 }) {
   return (
-    <>
-      <p>
-        Expiration:{" "}
+    <span className="expiration-value">
+      <span>
+        <span className="sr-only">Expiration: </span>
         {expiration === MAX_UINT256
           ? "Unlimited"
           : expiration <= 8640000000000n
@@ -18,14 +18,10 @@ export function OrderExpiration({
                 timeZoneName: "short",
               })
             : `Unix timestamp ${expiration.toString()} seconds (beyond calendar range)`}
-      </p>
-      {expiration !== MAX_UINT256 && (
-        <p>
-          {now >= expiration
-            ? "Deadline reached"
-            : `${(expiration - now).toString()} seconds remaining`}
-        </p>
+      </span>
+      {expiration !== MAX_UINT256 && now >= expiration && (
+        <small>Deadline reached</small>
       )}
-    </>
+    </span>
   );
 }

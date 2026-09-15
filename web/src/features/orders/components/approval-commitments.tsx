@@ -9,11 +9,15 @@ export function ApprovalCommitments({
   decimals,
   historyError,
   mode = "creation",
+  compact = false,
+  aggregateError = true,
 }: {
   plan: ReturnType<typeof approvalPlan>;
   decimals: number | undefined;
   historyError: string | undefined;
   mode?: ApprovalInput["mode"];
+  compact?: boolean;
+  aggregateError?: boolean;
 }) {
   return (
     <>
@@ -24,13 +28,14 @@ export function ApprovalCommitments({
             " This selected trade is checked individually."}
         </p>
       )}
-      <p>
-        Orders missing from this browser&apos;s history are not included in
-        aggregate commitments.
-        {mode === "repair" && " This viewed order is counted once."}
-      </p>
+      {!compact && (
+        <p>
+          Orders missing from this browser&apos;s history are not included in
+          aggregate commitments.
+        </p>
+      )}
       {historyError && <p role="alert">{historyError}</p>}
-      {plan.aggregateUnavailable && (
+      {plan.aggregateUnavailable && aggregateError && (
         <p role="alert">
           Aggregate status unavailable. The necessary allowance cannot be
           calculated.
@@ -42,7 +47,7 @@ export function ApprovalCommitments({
           available without guaranteeing coverage of all commitments.
         </p>
       )}
-      {plan.exactTarget !== undefined && decimals !== undefined && (
+      {!compact && plan.exactTarget !== undefined && decimals !== undefined && (
         <p>Necessary allowance: {formatAmount(plan.exactTarget, decimals)}</p>
       )}
     </>

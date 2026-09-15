@@ -1,3 +1,4 @@
+import { selectNetwork } from "./network-control";
 import { expect, test } from "@playwright/test";
 import { mnemonicToAccount } from "viem/accounts";
 import { z } from "zod";
@@ -115,30 +116,29 @@ test("creation distinguishes individual balance from aggregate commitments and u
   await page
     .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
     .click();
-  await page.getByLabel("Trade network").selectOption("31337");
+  await selectNetwork(page, "31337");
   await expect(
-    page.getByText("Individual balance is sufficient.", { exact: true }),
+    page.getByRole("button", { name: "Approve token", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText(/Balance does not cover all known open orders/),
   ).toBeVisible();
   await expect(
-    page.getByText("Necessary allowance: 130", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText(/Orders missing from this browser/),
+    page.getByText("Allow spending up to 130 tokens.", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Edit terms" }).click();
   await page.getByLabel("Send amount").fill("101");
+  await expect(
+    page.getByRole("button", {
+      name: "Insufficient send-token balance.",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await page.getByLabel("Send amount").fill("50");
   await page.getByRole("button", { name: "Review trade", exact: true }).click();
-  await expect(
-    page.getByText("Insufficient balance for this order.", { exact: true }),
-  ).toBeVisible();
   unavailable = true;
-  await page.evaluate(() =>
-    window.dispatchEvent(new Event("test:token-network")),
-  );
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(
-    page.getByText("Balance unavailable.", { exact: true }),
+    page.getByRole("button", { name: "Balance unavailable.", exact: true }),
   ).toBeVisible();
 });
