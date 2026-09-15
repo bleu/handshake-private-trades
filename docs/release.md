@@ -1,15 +1,15 @@
 # Release candidate runbook
 
-This is preparation for Yves's review, not release approval. No public contract or
-site has been deployed. Complete the manual checklist and record Yves's approval
-before the separate deployment task. Never publish the synthetic-address build
-produced by `npm run check` / `npm run build:smoke`.
+This runbook covers candidate verification and release approval. Manual testing
+uses the configured Gnosis deployment. Complete the manual checklist and record
+Yves's approval before deploying or publishing a new candidate. Never publish the synthetic-address build
+produced by `pnpm run check` / `pnpm run build:smoke`.
 
 ## Reproduce from a clean checkout
 
-Use the reviewed commit, Node 24.11.0, npm 11.6.1, and the Foundry commit in
+Use the reviewed commit, Node 24.11.0, pnpm 10.5.2, and the Foundry commit in
 [README](../README.md). The compiler is Solidity 0.8.30, Cancun, optimizer 200;
-forge-std is pinned by the submodule and OpenZeppelin 5.4.0 by `package-lock.json`.
+forge-std is pinned by the submodule and OpenZeppelin 5.4.0 by `pnpm-lock.yaml`.
 The CI workflow records the same installation and verification sequence.
 
 ```sh
@@ -17,27 +17,24 @@ git clone --recurse-submodules <repository-url> private-trade-links-rc
 cd private-trade-links-rc
 git checkout <reviewed-commit>
 git submodule update --init --recursive
-npm ci
+pnpm install --frozen-lockfile
 cargo install lintspec --version 0.12.2 --locked --root .tools
-npm run check
-npx playwright install chromium
+pnpm run check
+pnpm exec playwright install chromium
 ```
 
-For browser verification, start a **dedicated disposable** Anvil with
-`npm run local:start` in another terminal. Ensure port 8545 is available first;
-do not reset someone else's node. In the checkout, run:
+For automated browser verification, Playwright owns a disposable Anvil and
+performs fixture deployment and smoke checks. Ensure port 8545 is free; the
+suite refuses to reuse another node and stops its own node afterward. Run:
 
 ```sh
-npm run local:deploy
-npm run local:smoke
-npm run local:settlement-smoke
-npm run test:e2e
-npm run build:smoke
-npm run release:bundle
+pnpm run test:e2e
+pnpm run build:smoke
+pnpm run release:bundle
 git status --short
 ```
 
-Installed Chrome is also supported with `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`.
+Installed Chrome is also supported with `PLAYWRIGHT_CHANNEL=chrome pnpm run test:e2e`.
 The final `build:smoke` restores Next.js generated route types after the E2E
 development server, so `web/next-env.d.ts` matches the production checkout before
 bundling. Its output still must not be published.
@@ -47,7 +44,7 @@ compilation before a deployment exists; it is not a configured public release.
 
 ## Contract review bundle
 
-`npm run release:bundle` forces a fresh build with compiler inputs, checks the
+`pnpm run release:bundle` forces a fresh build with compiler inputs, checks the
 frontend ABI, and writes a uniquely named ignored `.scratch/release-candidates/`
 directory. Preserve this directory with the review evidence. It includes:
 
@@ -67,8 +64,8 @@ with `solc 0.8.30+commit.73712a01 --standard-json` and compare its settlement AB
 and creation bytecode with the bundle. Runtime contains constructor-populated
 EIP-712 immutable slots: it is a template, not a byte-for-byte deployed runtime.
 Use the artifact's immutable references for runtime comparison, then separately
-check domain values and `hashOrder`. The local settlement smoke demonstrates these
-checks against Anvil; it intentionally refuses public endpoints.
+check domain values and `hashOrder`. The automated test-chain setup demonstrates these
+checks against its fixed Anvil endpoint.
 
 ## Public configuration inventory
 
@@ -77,8 +74,8 @@ checks against Anvil; it intentionally refuses public endpoints.
 | Gnosis RPC             | `https://rpc.gnosischain.com`, override `NEXT_PUBLIC_GNOSIS_RPC_URL` | Browser JSON POST/CORS from the final origin; `eth_chainId` = `0x64`, current block and required contract reads work.                                         |
 | CoW discovery list     | `https://files.cow.fi/tokens/CowSwap.json`                           | Browser GET/CORS; valid list, chain 100 filtering; app reads decimals onchain.                                                                                |
 | WalletConnect          | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` not provided                  | Real 32-hex project ID from Reown dashboard; allow final origin; test actual relay/session/signing. Injected wallets remain available without it.             |
-| Public settlement      | `NEXT_PUBLIC_GNOSIS_SETTLEMENT_ADDRESS` not assigned                 | Approved immutable deployment record, ID 1 / chain 100; never repoint a published identity.                                                                   |
-| Development chain      | `NEXT_PUBLIC_ENABLE_ANVIL=false` in production                       | Build rejects enabled Anvil; ID 2 must not be available publicly.                                                                                             |
+| Public settlement      | `NEXT_PUBLIC_GNOSIS_SETTLEMENT_ADDRESS` from the deployment record   | Approved immutable deployment record, ID 1 / chain 100; never repoint a published identity.                                                                   |
+| Automated test chain   | `NEXT_PUBLIC_ENABLE_ANVIL=false` in production                       | Build rejects enabled Anvil; ID 2 must not be available publicly.                                                                                             |
 | Hosting origin         | Not selected                                                         | HTTPS, origin allowed by WalletConnect, fragment handling and clipboard verified.                                                                             |
 | Explorer               | `https://gnosisscan.io`                                              | Transaction links use original chain and correct hash; verified source matches approved build.                                                                |
 | Deployer / key custody | Actual operator/address not yet assigned                             | Yves names the operator/address and records hardware-wallet or encrypted-keystore custody before deployment; no deployment privilege remains in the contract. |
@@ -140,8 +137,8 @@ history, encryption, universal wallet support or audit is claimed.
    representative `hashOrder` against the frontend order module. The production
    contract is immutable, with no owner/pause/upgrade powers.
 5. Bind the approved address to reserved deployment ID 1 and configure the real
-   hosting origin/RPC/WalletConnect values. Run `npm run abi:check`, typecheck, and
-   **normal** `npm run build` with that address and Anvil disabled. Verify the
+   hosting origin/RPC/WalletConnect values. Run `pnpm run abi:check`, typecheck, and
+   **normal** `pnpm run build` with that address and Anvil disabled. Verify the
    built client registry/domain/ABI agree with the deployment before enabling
    trading. Retain the deployment record alongside the bundle.
 6. Complete final-origin browser and wallet checks and publish only the approved
@@ -154,7 +151,7 @@ all already published link IDs.
 
 ## Dependency advisory evidence
 
-The preparation audit on 2026-09-12 (`npm audit --json`, committed lockfile)
+The preparation audit on 2026-09-12 (`npm audit --json`, then-current npm lockfile)
 reported 26 vulnerable dependency entries: 24 moderate and 2 high, no critical.
 The high entries are transitive `axios` and nested `ws` under wallet dependencies.
 The audit suggests an axios update and a major wagmi change for the nested ws
