@@ -38,10 +38,13 @@ export type StoredOrder = {
   payload: string;
   orderId: `0x${string}`;
   signed: SignedOrderLink;
+  savedAt?: number;
 };
 const historyRecordSchema = z.strictObject({
   version: z.literal(1),
   payload: z.string(),
+  filledBy: addressSchema.optional(),
+  savedAt: z.number().int().nonnegative().max(8640000000000000).optional(),
 });
 const historyPrefix = (maker: string, deploymentId: number) =>
   `ptl:history:${String(deploymentIdSchema.parse(deploymentId))}:${addressSchema.parse(maker).toLowerCase()}:`;
@@ -55,11 +58,56 @@ async function verifiedEntry(
   return { payload, orderId: orderId(signed.order, deployment.domain), signed };
 }
 
+const displayBalanceSchema = z.object({
+  amount: z
+    .string()
+    .regex(/^(0|[1-9][0-9]{0,77})$/)
+    .refine((value) => BigInt(value) < 1n << 256n),
+  decimals: z.number().int().min(0).max(255),
+});
+export type DisplayBalance = z.infer<typeof displayBalanceSchema>;
+const displayBalanceKey = (chainId: number, token: string, owner: string) =>
+  `ptl:display-balance:${String(z.number().int().positive().parse(chainId))}:${addressSchema.parse(token).toLowerCase()}:${addressSchema.parse(owner).toLowerCase()}`;
+
 export function createStorageAdapter(
   getStorage: () => StoragePort,
   onChange: () => void = () => {},
 ) {
   return {
+    readDisplayBalance(
+      chainId: number,
+      token: string,
+      owner: string,
+    ): DisplayBalance | undefined {
+      try {
+        return displayBalanceSchema.parse(
+          JSON.parse(
+            getStorage().getItem(displayBalanceKey(chainId, token, owner)) ??
+              "null",
+          ),
+        );
+      } catch {
+        return undefined;
+      }
+    },
+    saveDisplayBalance(
+      chainId: number,
+      token: string,
+      owner: string,
+      value: DisplayBalance,
+    ) {
+      try {
+        const key = displayBalanceKey(chainId, token, owner);
+        const serialized = JSON.stringify(displayBalanceSchema.parse(value));
+        const storage = getStorage();
+        if (storage.getItem(key) !== serialized) {
+          storage.setItem(key, serialized);
+          onChange();
+        }
+      } catch {
+        /* Display caching is best effort and never supplies transaction readiness. */
+      }
+    },
     async saveOrder(
       payload: string,
       maker: string,
@@ -71,7 +119,27 @@ export function createStorageAdapter(
       const key =
         historyPrefix(maker, entry.signed.deploymentId) + entry.orderId;
       try {
-        getStorage().setItem(key, JSON.stringify({ version: 1, payload }));
+        const storage = getStorage();
+        const previous = storage.getItem(key);
+        // Restoring a legacy record must not invent its original save time.
+        let savedAt: number | undefined;
+        if (previous === null) savedAt = Date.now();
+        else {
+          try {
+            savedAt = historyRecordSchema.parse(JSON.parse(previous)).savedAt;
+          } catch {
+            savedAt = Date.now();
+          }
+        }
+        if (savedAt !== undefined) entry.savedAt = savedAt;
+        storage.setItem(
+          key,
+          JSON.stringify({
+            version: 1,
+            payload,
+            ...(savedAt !== undefined ? { savedAt } : {}),
+          }),
+        );
         onChange();
         return { ok: true as const, entry, url: `/trade#${payload}` };
       } catch {
@@ -84,10 +152,49 @@ export function createStorageAdapter(
         };
       }
     },
+    async saveFilledOrder(
+      payload: string,
+      taker: string,
+      registry: readonly LinkDeployment[],
+    ) {
+      const entry = await verifiedEntry(payload, registry);
+      const owner = addressSchema.parse(taker);
+      if (
+        owner === entry.signed.order.maker ||
+        (entry.signed.order.restrictedTaker !== zeroAddress &&
+          entry.signed.order.restrictedTaker !== owner)
+      )
+        throw new Error("This wallet cannot be the taker of this order.");
+      try {
+        const key =
+          historyPrefix(owner, entry.signed.deploymentId) + entry.orderId;
+        const storage = getStorage();
+        const previous = historyRecordSchema.safeParse(
+          JSON.parse(storage.getItem(key) ?? "null"),
+        );
+        storage.setItem(
+          key,
+          JSON.stringify({
+            version: 1,
+            payload,
+            filledBy: owner,
+            savedAt: previous.success ? previous.data.savedAt : Date.now(),
+          }),
+        );
+        onChange();
+        return { ok: true as const };
+      } catch {
+        return {
+          ok: false as const,
+          error: "Filled trade history could not be saved. Keep this link.",
+        };
+      }
+    },
     async readOrders(
       maker: string,
       deploymentId: number,
       registry: readonly LinkDeployment[],
+      includeFilled = false,
     ): Promise<ReadResult<StoredOrder[]>> {
       const value: StoredOrder[] = [];
       let error: string | undefined;
@@ -107,12 +214,22 @@ export function createStorageAdapter(
             if (
               key !==
               historyPrefix(
-                entry.signed.order.maker,
+                record.filledBy ?? entry.signed.order.maker,
                 entry.signed.deploymentId,
               ) +
                 entry.orderId
             )
               throw new Error("Mismatched order identity.");
+            if (record.filledBy) {
+              if (
+                record.filledBy === entry.signed.order.maker ||
+                (entry.signed.order.restrictedTaker !== zeroAddress &&
+                  record.filledBy !== entry.signed.order.restrictedTaker)
+              )
+                throw new Error("Invalid taker history.");
+              if (!includeFilled) continue;
+            }
+            if (record.savedAt !== undefined) entry.savedAt = record.savedAt;
             value.push(entry);
           } catch {
             error =

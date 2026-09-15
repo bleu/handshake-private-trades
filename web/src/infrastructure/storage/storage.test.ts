@@ -103,3 +103,54 @@ await test("corrupt or denied draft storage reports errors without inventing sav
     false,
   );
 });
+
+await test("history records retain their first local save time and legacy dates remain unknown", async (t) => {
+  const { privateKeyToAccount } = await import("viem/accounts");
+  const { orderSchema, orderTypedData, encodeOrderLink } =
+    await import("../../domain/orders/index.ts");
+  const account = privateKeyToAccount(
+    "0x000000000000000000000000000000000000000000000000000000000000a11c",
+  );
+  const deployment = {
+    id: 1,
+    domain: {
+      name: "Private Trade Links",
+      version: "1",
+      chainId: 100,
+      verifyingContract: "0x0000000000000000000000000000000000001000" as const,
+    },
+  };
+  const order = orderSchema.parse({
+    maker: account.address,
+    restrictedTaker: "0x" + "00".repeat(20),
+    makerToken: "0x" + "11".repeat(20),
+    takerToken: "0x" + "22".repeat(20),
+    makerAmount: 1n,
+    takerAmount: 2n,
+    expiration: 100n,
+    salt: "0x" + "ff".repeat(32),
+  });
+  const signature = await account.signTypedData(
+    orderTypedData(order, deployment.domain),
+  );
+  const payload = await encodeOrderLink({ order, signature, deploymentId: 1 }, [
+    deployment,
+  ]);
+  const backend = new MemoryStorage();
+  const storage = createStorageAdapter(() => backend);
+  t.mock.timers.enable({ apis: ["Date"], now: 1700000000000 });
+  await storage.saveOrder(payload, account.address, [deployment]);
+  t.mock.timers.tick(60000);
+  await storage.saveOrder(payload, account.address, [deployment]);
+  const read = await storage.readOrders(account.address, 1, [deployment]);
+  assert.equal(read.value[0]?.savedAt, 1700000000000);
+  const key = backend.key(0);
+  assert.ok(key);
+  backend.setItem(key, JSON.stringify({ version: 1, payload }));
+  await storage.saveOrder(payload, account.address, [deployment]);
+  assert.equal(
+    (await storage.readOrders(account.address, 1, [deployment])).value[0]
+      ?.savedAt,
+    undefined,
+  );
+});
