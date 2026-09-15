@@ -1,4 +1,5 @@
 "use client";
+import { Notice } from "@/components/ui/notice";
 import {
   useTransactions,
   type Transaction,
@@ -18,33 +19,41 @@ export function TransactionFeedback() {
 }
 function Feedback({ activity }: { activity: Transaction }) {
   return (
-    <aside
-      aria-live="polite"
-      className="mx-auto max-w-5xl rounded border bg-white p-4"
-      role={activity.phase === "failed" ? "alert" : "status"}
+    <Notice
+      key={`${activity.phase}:${activity.message}:${activity.hash ?? ""}`}
+      kind={
+        activity.phase === "confirmed"
+          ? "success"
+          : activity.phase === "failed"
+            ? "error"
+            : "info"
+      }
     >
       <p>{activity.message}</p>
-      <p className="break-all text-sm">
-        Account: {activity.account} · Chain: {activity.chainId}
-      </p>
-      {activity.originalHash && activity.originalHash !== activity.hash && (
-        <p className="break-all">
-          Original transaction: {activity.originalHash}
+      <details className="transaction-details">
+        <summary>Transaction details</summary>
+        <p className="break-all text-sm">
+          Account: {activity.account} · Chain: {activity.chainId}
         </p>
-      )}
-      {activity.hash &&
-        (activity.chainId === 100 ? (
-          <a
-            className="break-all underline"
-            href={`https://gnosisscan.io/tx/${activity.hash}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {activity.hash}
-          </a>
-        ) : (
-          <p className="break-all">Transaction: {activity.hash}</p>
-        ))}
-    </aside>
+        {activity.originalHash && activity.originalHash !== activity.hash && (
+          <p className="break-all">
+            Original transaction: {activity.originalHash}
+          </p>
+        )}
+        {activity.hash &&
+          (activity.chainId === 100 ? (
+            <a
+              className="break-all underline"
+              href={`https://gnosisscan.io/tx/${activity.hash}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {activity.hash}
+            </a>
+          ) : (
+            <p className="break-all">Transaction: {activity.hash}</p>
+          ))}
+      </details>
+    </Notice>
   );
 }

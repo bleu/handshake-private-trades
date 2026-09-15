@@ -1,5 +1,6 @@
 "use client";
 import { useSyncExternalStore } from "react";
+import { useSearchParams } from "next/navigation";
 
 function subscribe(listener: () => void) {
   window.addEventListener("hashchange", listener);
@@ -10,6 +11,9 @@ function subscribe(listener: () => void) {
   };
 }
 export function useTradeFragment() {
+  // App Router navigation can change the hash via pushState without emitting
+  // hashchange. Its URL context also triggers a fresh browser snapshot.
+  useSearchParams();
   return useSyncExternalStore(
     subscribe,
     () => window.location.hash.slice(1),

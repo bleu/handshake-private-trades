@@ -1,3 +1,4 @@
+import { selectNetwork } from "./network-control";
 import { expect, test, type Page } from "@playwright/test";
 import { erc20Abi, getAddress } from "viem";
 import { decodeOrderLink, MAX_UINT256 } from "../src/domain/orders";
@@ -71,7 +72,7 @@ test("mobile maker imports tokens, restores a draft, shares an accepted trade, t
   );
   await page.goto("/");
   await connect(page);
-  await page.getByLabel("Trade network").selectOption("31337");
+  await selectNetwork(page, "31337");
   await fitsViewport(page);
   for (const [side, address] of [
     ["Send", send],
@@ -80,25 +81,27 @@ test("mobile maker imports tokens, restores a draft, shares an accepted trade, t
     await page
       .getByRole("button", { name: `Choose ${side} token`, exact: true })
       .click();
+    if (!(await page.getByLabel("Token address", { exact: true }).isVisible()))
+      await page
+        .getByRole("button", { name: "Import token", exact: true })
+        .click();
     await page.getByLabel("Token address", { exact: true }).fill(address);
     await page
-      .getByRole("button", { name: "Inspect token", exact: true })
+      .getByRole("button", { name: "Import information", exact: true })
       .click();
-    await page
-      .getByRole("button", { name: "Save import", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(
       page.getByText("Import saved.", { exact: true }),
     ).toBeVisible();
     await fitsViewport(page);
-    await page.getByRole("button", { name: "Use token", exact: true }).click();
+    await page.getByRole("dialog").getByRole("option").click();
   }
   await page.getByLabel("Send amount").fill("5");
   await page.getByLabel("Receive amount").fill("7");
   await page.getByRole("button", { name: "Review trade", exact: true }).click();
   await page.reload();
   await connect(page);
-  await page.getByLabel("Trade network").selectOption("31337");
+  await selectNetwork(page, "31337");
   await expect(page.getByText("You send: 5", { exact: true })).toBeVisible();
   await expect(page.getByText("You receive: 7", { exact: true })).toBeVisible();
   await fitsViewport(page);
@@ -136,7 +139,7 @@ test("mobile maker imports tokens, restores a draft, shares an accepted trade, t
     );
     await recipient.goto(firstLink);
     await expect(
-      recipient.getByText("Maker sends: 5", { exact: true }),
+      recipient.getByText("You receive: 5", { exact: true }),
     ).toBeVisible();
     await connect(recipient);
     await recipient
@@ -145,6 +148,10 @@ test("mobile maker imports tokens, restores a draft, shares an accepted trade, t
     await expect(
       recipient.getByText("Approval confirmed.", { exact: true }),
     ).toBeVisible();
+    await recipient.screenshot({
+      path: testInfo.outputPath("recipient-open-desktop.png"),
+      fullPage: true,
+    });
     await recipient
       .getByRole("button", { name: "Accept trade", exact: true })
       .click();
@@ -167,28 +174,31 @@ test("mobile maker imports tokens, restores a draft, shares an accepted trade, t
       999993000000n,
     ]);
     await recipient.getByRole("link", { name: "History", exact: true }).click();
-    await recipient.getByLabel("History network").selectOption("31337");
+    await selectNetwork(recipient, "31337");
+    await expect(recipient.getByRole("article")).toHaveCount(1);
     await expect(
-      recipient.getByText("No saved orders for this maker and network.", {
-        exact: true,
-      }),
+      recipient.getByText("Status: Filled", { exact: true }),
     ).toBeVisible();
     await page.evaluate(() => window.dispatchEvent(new Event("focus")));
     await expect(
       page.getByText("Order status: Filled", { exact: true }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Create new order", exact: true })
-      .click();
-    await expect(page.getByLabel("Send amount")).toHaveValue("5");
+    await page.getByRole("link", { name: "Create", exact: true }).click();
+    for (const [side, address] of [
+      ["Send", send],
+      ["Receive", receive],
+    ] as const) {
+      await page
+        .getByRole("button", { name: `Choose ${side} token`, exact: true })
+        .click();
+      await page
+        .getByLabel("Token", { exact: true })
+        .getByRole("option", { name: new RegExp(getAddress(address), "i") })
+        .click();
+    }
+    await page.getByLabel("Send amount").fill("5");
+    await page.getByLabel("Receive amount").fill("7");
     await page.getByLabel("Duration").selectOption("Unlimited");
-    await page
-      .getByRole("button", { name: "Choose Send token", exact: true })
-      .click();
-    await page
-      .getByLabel("Token", { exact: true })
-      .selectOption(getAddress(send));
-    await page.getByRole("button", { name: "Use token", exact: true }).click();
     await page
       .getByRole("button", { name: "Review trade", exact: true })
       .click();
@@ -217,7 +227,7 @@ test("mobile maker imports tokens, restores a draft, shares an accepted trade, t
     ).toBeVisible();
     expect(await balances()).toEqual(after);
     await page.getByRole("link", { name: "History", exact: true }).click();
-    await page.getByLabel("History network").selectOption("31337");
+    await selectNetwork(page, "31337");
     await expect(page.getByRole("article")).toHaveCount(2);
     await expect(
       page.getByText("Status: Filled", { exact: true }),
@@ -278,7 +288,7 @@ test("uint256-scale signed amounts remain readable without horizontal overflow o
     page.getByText("Expiration: Unlimited", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText(/^Maker sends: 115792089237316195423570985/),
+    page.getByText(/^You receive: 115792089237316195423570985/),
   ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("large-amount-mobile.png"),
@@ -306,7 +316,7 @@ test("invalid signed links are rejected without sending fragments or signed data
   await expect(
     page.getByText(/Invalid or unsupported trade link/),
   ).toBeVisible();
-  await expect(page.getByText(/^Maker sends:/)).toHaveCount(0);
+  await expect(page.getByText(/^You receive:/)).toHaveCount(0);
   expect(
     requests.some(
       (request) =>

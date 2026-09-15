@@ -138,8 +138,11 @@ test("a maker signs in one browser and an independent taker explicitly approves 
       .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
       .click();
     await expect(
-      recipient.getByRole("button", { name: "Accept trade", exact: true }),
-    ).toBeDisabled();
+      recipient.getByRole("button", {
+        name: "Approve token",
+        exact: true,
+      }),
+    ).toBeEnabled();
     await recipient
       .getByRole("button", { name: "Approve token", exact: true })
       .click();
@@ -179,10 +182,10 @@ test("a maker signs in one browser and an independent taker explicitly approves 
   }
 });
 
-test("a maker repairs allowance from an unsaved retained link and the viewed order counts exactly once", async ({
+test("a maker retains a link when storage is full without offering approval management", async ({
   page,
 }) => {
-  const { payload, signed, deployment } = await tradeFixture();
+  const { payload } = await tradeFixture();
   await installAnvilWallet(page);
   await page.addInitScript(() => {
     const original = Object.getOwnPropertyDescriptor(
@@ -206,22 +209,11 @@ test("a maker repairs allowance from an unsaved retained link and the viewed ord
     page.getByText(/Order history could not be saved/),
   ).toBeVisible();
   await expect(
-    page.getByText("Necessary allowance: 50", { exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Approve token", exact: true })
-    .click();
+    page.locator("summary").filter({ hasText: /^Manage token approval$/ }),
+  ).toHaveCount(0);
   await expect(
-    page.getByText("Approval confirmed.", { exact: true }),
-  ).toBeVisible();
-  expect(
-    await localClient.readContract({
-      address: signed.order.makerToken,
-      abi: erc20Abi,
-      functionName: "allowance",
-      args: [maker, deployment.address],
-    }),
-  ).toBe(50000000n);
+    page.getByRole("button", { name: "Approve token", exact: true }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Accept trade", exact: true }),
   ).toHaveCount(0);
@@ -363,7 +355,230 @@ test("acceptance rechecks individual maker funding before opening the wallet", a
     page.getByRole("alert").filter({ hasText: "Account:" }),
   ).toContainText("Maker balance is insufficient.");
   await expect(
-    page.getByRole("button", { name: "Accept trade", exact: true }),
+    page.getByRole("button", {
+      name: "Maker balance for BROWSER is insufficient.",
+      exact: true,
+    }),
   ).toBeDisabled();
   expect(submitted).toBe(0);
+});
+
+test("a restricted trade blocks the wrong wallet and recovers for its eligible taker", async ({
+  page,
+}, testInfo) => {
+  await openFundedTrade(page);
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new CustomEvent("test:anvil-account", {
+        detail: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      }),
+    ),
+  );
+  const blocked = page.getByRole("button", {
+    name: "This trade is not for you",
+    exact: true,
+  });
+  await expect(blocked).toBeDisabled();
+  await page
+    .getByRole("button", { name: "About who can accept", exact: true })
+    .focus();
+  await expect(page.getByRole("tooltip")).toContainText(
+    "Only the designated wallet can accept this order.",
+  );
+  await page.keyboard.press("Escape");
+  for (const width of [375, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await expect(blocked).toBeDisabled();
+    await page.screenshot({
+      path: testInfo.outputPath(`blocked-trade-${String(width)}.png`),
+      fullPage: true,
+    });
+  }
+  await page.evaluate(
+    (account) =>
+      window.dispatchEvent(
+        new CustomEvent("test:anvil-account", { detail: account }),
+      ),
+    taker,
+  );
+  await expect(
+    page.getByRole("button", { name: "Accept trade", exact: true }),
+  ).toBeEnabled();
+});
+
+test("blocked actions name the deficient token and recover after fresh allowance reads", async ({
+  page,
+}) => {
+  const { signed, deployment } = await openFundedTrade(page);
+  await localClient.waitForTransactionReceipt({
+    hash: await localWallet.writeContract({
+      address: signed.order.makerToken,
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [deployment.address, 0n],
+    }),
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(
+    page.getByRole("button", {
+      name: "Maker approval for BROWSER is insufficient.",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await localClient.waitForTransactionReceipt({
+    hash: await localWallet.writeContract({
+      address: signed.order.makerToken,
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [deployment.address, signed.order.makerAmount],
+    }),
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(
+    page.getByRole("button", { name: "Accept trade", exact: true }),
+  ).toBeEnabled();
+});
+
+test("acceptance stays stable during background reads and omits approval details", async ({
+  page,
+}) => {
+  await openFundedTrade(page);
+  const accept = page.getByRole("button", {
+    name: "Accept trade",
+    exact: true,
+  });
+  await expect(accept).toBeEnabled();
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let reads = 0;
+  await page.route("http://127.0.0.1:8545/", async (route) => {
+    const request = z
+      .object({ method: z.string() })
+      .parse(JSON.parse(route.request().postData() ?? "null") as unknown);
+    if (request.method === "eth_call") {
+      reads++;
+      await gate;
+    }
+    await route.continue();
+  });
+  try {
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await expect.poll(() => reads).toBeGreaterThan(0);
+    await expect(accept).toBeEnabled();
+    await expect(
+      page.getByText("Order status: Open", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+    await expect(
+      page.locator("summary").filter({ hasText: /^Approval details$/ }),
+    ).toHaveCount(0);
+  } finally {
+    release();
+  }
+});
+
+test("a confirmed taker fill is saved in paginated History with wallet-relative amounts", async ({
+  page,
+}, testInfo) => {
+  const fixture = await openFundedTrade(page);
+  await page.getByRole("button", { name: "Accept trade", exact: true }).click();
+  await expect(
+    page.getByText("Settlement confirmed.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Create an order", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Create another order", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: "History", exact: true }).click();
+  const row = page.getByRole("article", {
+    name: `Order ${fixture.id}`,
+    exact: true,
+  });
+  await expect(row).toBeVisible();
+  await expect(row.getByText("Status: Filled", { exact: true })).toBeVisible();
+  await expect(row.getByText("You send: 2", { exact: true })).toBeVisible();
+  await expect(row.getByText("You receive: 50", { exact: true })).toBeVisible();
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Connect Wallet", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
+    .click();
+  await page.evaluate(
+    (account) =>
+      window.dispatchEvent(
+        new CustomEvent("test:anvil-account", { detail: account }),
+      ),
+    taker,
+  );
+  await expect(row).toBeVisible();
+  await row.getByRole("link", { name: /^View order / }).click();
+  await expect(page).toHaveURL(`/trade#${fixture.payload}`);
+  const details = page.locator(".trade-details");
+  await expect(details.getByText("You send: 2", { exact: true })).toBeVisible();
+  await expect(
+    details.getByText("You receive: 50", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Cancel order", exact: true }),
+  ).toHaveCount(0);
+  await expect(details.locator(`dd[title="${maker}"]`)).toBeVisible();
+  for (const width of [375, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.screenshot({
+      path: testInfo.outputPath(`taker-history-details-${String(width)}.png`),
+      fullPage: true,
+    });
+  }
+
+  await page.getByRole("link", { name: "History", exact: true }).click();
+  await page.route("http://127.0.0.1:8545/", (route) =>
+    route.fulfill({ status: 503, body: "Unavailable" }),
+  );
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page
+    .getByRole("button", { name: "Status unavailable 1", exact: true })
+    .click();
+  await expect(
+    row.getByText("Status: Status unavailable", { exact: true }),
+  ).toBeVisible();
+});
+
+test("a confirmed settlement warns when taker history cannot be saved", async ({
+  page,
+}) => {
+  await openFundedTrade(page);
+  await page.evaluate(() => {
+    // Keep the native receiver while simulating history quota failure.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const write = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("ptl:history:"))
+        throw new DOMException("Full", "QuotaExceededError");
+      write.call(this, key, value);
+    };
+  });
+  await page.getByRole("button", { name: "Accept trade", exact: true }).click();
+  await expect(
+    page.getByText("Settlement confirmed.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Order status: Filled", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: "Filled trade history could not be saved. Keep this link.",
+    }),
+  ).toBeVisible();
 });

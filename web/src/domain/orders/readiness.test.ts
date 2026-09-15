@@ -77,23 +77,6 @@ await test("acceptance skips approval when the selected amount is covered despit
     true,
   );
 });
-await test("repair includes the viewed order once even when absent from local history", () => {
-  assert.equal(
-    approvalPlan({
-      ...input,
-      mode: "repair",
-      amount: 80n,
-      viewed: known,
-      known: [],
-    }).exactTarget,
-    80n,
-  );
-  assert.equal(
-    approvalPlan({ ...input, mode: "repair", amount: 80n, viewed: known })
-      .exactTarget,
-    80n,
-  );
-});
 await test("unknown statuses or unavailable history disable exact totals without silently omitting commitments", () => {
   const plan = approvalPlan({
     ...input,

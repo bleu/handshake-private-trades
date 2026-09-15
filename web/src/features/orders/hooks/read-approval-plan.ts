@@ -20,7 +20,6 @@ export async function readApprovalPlan(
     token: Address;
     amount: bigint;
     mode: ApprovalInput["mode"];
-    viewed?: KnownOrder;
   },
 ) {
   const { deployment, maker, token } = input;
@@ -72,21 +71,8 @@ export async function readApprovalPlan(
       })
       .catch(() => undefined),
   ]);
-  let viewed = input.viewed;
-  if (viewed) {
-    viewed = {
-      ...viewed,
-      status: await readOrderStatus(
-        config,
-        client,
-        deployment,
-        viewed.orderId as `0x${string}`,
-      ),
-    };
-  }
   return approvalPlan({
     ...input,
-    ...(viewed ? { viewed } : {}),
     deploymentId: deployment.id,
     now: BigInt(Math.floor(Date.now() / 1000)),
     known,

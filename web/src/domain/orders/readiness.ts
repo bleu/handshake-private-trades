@@ -8,7 +8,7 @@ export type KnownOrder = {
   status: OrderStatus | undefined;
 };
 export type ApprovalInput = {
-  mode: "creation" | "acceptance" | "repair";
+  mode: "creation" | "acceptance";
   maker: string;
   token: string;
   deploymentId: number;
@@ -16,18 +16,14 @@ export type ApprovalInput = {
   balance: bigint | undefined;
   allowance: bigint | undefined;
   known: readonly KnownOrder[];
-  viewed?: KnownOrder;
   now: bigint;
   historyAvailable: boolean;
 };
 export function approvalPlan(input: ApprovalInput) {
-  let total = input.mode === "repair" ? 0n : input.amount;
+  let total = input.amount;
   let aggregateUnavailable = !input.historyAvailable;
   const seen = new Set<string>();
-  for (const entry of [
-    ...(input.mode === "repair" && input.viewed ? [input.viewed] : []),
-    ...input.known,
-  ]) {
+  for (const entry of input.known) {
     if (
       entry.deploymentId !== input.deploymentId ||
       entry.order.maker.toLowerCase() !== input.maker.toLowerCase() ||

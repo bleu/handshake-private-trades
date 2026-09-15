@@ -1,3 +1,4 @@
+import { expandDetails } from "./order-details";
 import {
   localClient,
   localWallet,
@@ -156,9 +157,11 @@ test("wallet cancellation follows the replacement hash and leaves the order open
         { exact: true },
       ),
     ).toBeVisible({ timeout: 15000 });
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText(`Transaction: ${replacement}`, { exact: true }),
     ).toBeVisible();
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText(`Original transaction: ${original}`, { exact: true }),
     ).toBeVisible();
@@ -224,6 +227,7 @@ test("repricing across route, account and network changes confirms the original 
     await expect(
       page.getByRole("button", { name: "Chain Selector", exact: true }),
     ).toContainText("Gnosis");
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText(`Account: ${maker} · Chain: 31337`, { exact: true }),
     ).toBeVisible();
@@ -239,9 +243,11 @@ test("repricing across route, account and network changes confirms the original 
         (transaction.maxPriorityFeePerGas ?? 1000000000n) * 2n,
     });
     await node.mine({ blocks: 1 });
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText("Approval confirmed.", { exact: true }),
     ).toBeVisible({ timeout: 15000 });
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText(`Transaction: ${replacement}`, { exact: true }),
     ).toBeVisible();
@@ -291,9 +297,6 @@ test("signing after approval does not forget the approval receipt when its block
     page.getByText("Approval pending/rechecking. Receipt unavailable.", {
       exact: true,
     }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Maker allowance is insufficient.", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Cancel order", exact: true }),
@@ -380,9 +383,11 @@ test("a replacement mined during an RPC outage is discovered after the original 
     ).toBeVisible({ timeout: 20000 });
     hideOriginal = true;
     outage = false;
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText("Approval confirmed.", { exact: true }),
     ).toBeVisible();
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText(`Transaction: ${replacement}`, { exact: true }),
     ).toBeVisible();
@@ -427,9 +432,11 @@ test("a repriced transaction after a confirmed receipt disappears is followed th
   });
   await localClient.waitForTransactionReceipt({ hash: replacement });
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expandDetails(page, "Transaction details");
   await expect(
     page.getByText("Approval confirmed.", { exact: true }),
   ).toBeVisible();
+  await expandDetails(page, "Transaction details");
   await expect(
     page.getByText(`Transaction: ${replacement}`, { exact: true }),
   ).toBeVisible();
@@ -612,9 +619,11 @@ test("a reorg replacing an already scanned empty block still discovers the pendi
         (transaction.maxPriorityFeePerGas ?? 1000000000n) * 2n,
     });
     await localClient.waitForTransactionReceipt({ hash: replacement });
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText("Approval confirmed.", { exact: true }),
     ).toBeVisible();
+    await expandDetails(page, "Transaction details");
     await expect(
       page.getByText(`Transaction: ${replacement}`, { exact: true }),
     ).toBeVisible();

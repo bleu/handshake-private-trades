@@ -21,7 +21,7 @@ export function useTradeState(entry: StoredOrder, deployment: Deployment) {
     };
   }, []);
   const query = useOrderStatuses(deployment, [entry.orderId])[0];
-  const status = query?.isSuccess && !query.isFetching ? query.data : undefined;
+  const status = query?.isSuccess ? query.data : undefined;
   const makerToken = useTokenMetadata(
     deployment.chainId,
     order.makerToken,
@@ -56,6 +56,7 @@ export function useTradeState(entry: StoredOrder, deployment: Deployment) {
     chainId,
     now,
     status,
+    statusLoading: !query || query.isPending,
     label: tradeStatus(status, order.expiration, now),
     makerToken,
     takerToken,

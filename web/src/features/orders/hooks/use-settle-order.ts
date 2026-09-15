@@ -7,7 +7,8 @@ import { erc20Abi, type Address } from "viem";
 import type { Deployment } from "@/config/deployments";
 import { readOrderStatus } from "@/infrastructure/chain/order-status";
 import { settlementReadiness } from "@/domain/orders";
-import type { StoredOrder } from "@/infrastructure/storage";
+import { browserStorage, type StoredOrder } from "@/infrastructure/storage";
+import { deployments } from "@/config/deployments";
 import {
   ActionError,
   useTransactions,
@@ -18,6 +19,7 @@ export function useSettleOrder(
   deployment: Deployment,
   taker: Address,
   decimals: { maker: number | undefined; taker: number | undefined },
+  onHistoryWarning: (warning: string | undefined) => void,
 ) {
   const config = useConfig();
   const client = useQueryClient();
@@ -117,6 +119,12 @@ export function useSettleOrder(
               throw new ActionError(
                 "Settlement receipt confirmed, but order status is unavailable or changed. Refresh before continuing.",
               );
+            const saved = await browserStorage.saveFilledOrder(
+              entry.payload,
+              taker,
+              deployments,
+            );
+            onHistoryWarning(saved.ok ? undefined : saved.error);
           },
         };
       },

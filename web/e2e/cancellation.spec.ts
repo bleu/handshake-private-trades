@@ -51,10 +51,19 @@ test("a maker confirms cancellation from a retained link despite zero funding an
   await page
     .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
     .click();
-  await expect(
-    page.getByText("Maker balance unavailable.", { exact: true }),
-  ).toBeVisible();
   await page.getByRole("button", { name: "Cancel order", exact: true }).click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Cancel this order?",
+    exact: true,
+  });
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText(id);
+  await expect(
+    confirmation.getByText(
+      "You send: 50000000 base units (decimals unavailable)",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await expect(
     page.getByText(
       "Cancellation takes effect when confirmed onchain. The order may still be filled before then.",
@@ -98,9 +107,6 @@ test("cancellation is hidden from other wallets and after expiration", async ({
   await page
     .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
     .click();
-  await expect(
-    page.getByText("You can review this trade as its taker.", { exact: true }),
-  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Cancel order", exact: true }),
   ).toHaveCount(0);
@@ -272,7 +278,10 @@ test("a failed fresh status read prevents cancellation and recovery requires a n
     page.getByRole("button", { name: "Confirm cancellation", exact: true }),
   ).toBeDisabled();
   await page.unroute("http://127.0.0.1:8545/");
-  await page.getByRole("button", { name: "Refresh trade" }).click();
+  await page
+    .getByRole("dialog", { name: "Cancel this order?", exact: true })
+    .getByRole("button", { name: "Refresh trade" })
+    .click();
   await expect(
     page.getByRole("button", { name: "Confirm cancellation", exact: true }),
   ).toBeEnabled();
@@ -280,6 +289,59 @@ test("a failed fresh status read prevents cancellation and recovery requires a n
     page.getByText("Order status: Open", { exact: true }),
   ).toBeVisible();
   await page
+    .getByRole("button", { name: "Confirm cancellation", exact: true })
+    .click();
+  await expect(
+    page.getByText("Cancellation confirmed.", { exact: true }),
+  ).toBeVisible();
+});
+
+test("cancellation rejection remains visible inside the confirmation and permits an explicit retry", async ({
+  page,
+}) => {
+  const { payload } = await tradeFixture();
+  await installAnvilWallet(page);
+  await page.goto(`/trade#${payload}`);
+  await page
+    .getByRole("button", { name: "Connect Wallet", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
+    .click();
+  await page.getByRole("button", { name: "Cancel order", exact: true }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Cancel this order?",
+    exact: true,
+  });
+  let reject = true;
+  await page.route("http://127.0.0.1:8545/", async (route) => {
+    const request = z
+      .object({ id: z.number(), method: z.string() })
+      .parse(JSON.parse(route.request().postData() ?? "null") as unknown);
+    if (request.method === "eth_sendTransaction" && reject) {
+      reject = false;
+      await route.fulfill({
+        json: {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: { code: 4001, message: "Rejected" },
+        },
+      });
+    } else await route.continue();
+  });
+  await dialog
+    .getByRole("button", { name: "Confirm cancellation", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Cancellation failed or was rejected",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "Confirm cancellation", exact: true }),
+  ).toBeEnabled();
+  await dialog
+    .getByRole("button", { name: "Dismiss notification", exact: true })
+    .click();
+  await dialog
     .getByRole("button", { name: "Confirm cancellation", exact: true })
     .click();
   await expect(

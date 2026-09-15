@@ -61,7 +61,6 @@ export function useApproveToken({
           token,
           amount,
           mode,
-          ...(viewed ? { viewed } : {}),
         });
         if (viewed) {
           const current = await readOrderStatus(

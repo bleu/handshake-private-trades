@@ -15,23 +15,31 @@ export function TradeAcceptance({
   deployment,
   state,
   taker,
+  onHistoryWarning,
 }: {
   entry: StoredOrder;
   deployment: Deployment;
   state: ReturnType<typeof useTradeState>;
   taker: Address;
+  onHistoryWarning: (warning: string | undefined) => void;
 }) {
   const fresh = <T,>(query: {
     isSuccess: boolean;
     isFetching: boolean;
     data: T | undefined;
-  }) => (query.isSuccess && !query.isFetching ? query.data : undefined);
+  }) => (query.isSuccess ? query.data : undefined);
   const decimals = {
     maker: fresh(state.makerToken.decimals),
     taker: fresh(state.takerToken.decimals),
   };
-  const { settle, busy } = useSettleOrder(entry, deployment, taker, decimals);
-  const { plan, historyError } = useApprovalPlan({
+  const { settle, busy } = useSettleOrder(
+    entry,
+    deployment,
+    taker,
+    decimals,
+    onHistoryWarning,
+  );
+  const { plan, historyError, aggregateError } = useApprovalPlan({
     deployment,
     maker: taker,
     token: entry.signed.order.takerToken,
@@ -48,66 +56,90 @@ export function TradeAcceptance({
     takerBalance: fresh(state.takerFunding.balance),
     takerAllowance: fresh(state.takerFunding.allowance),
   });
+  const tokenReason = reason?.replace(
+    /^(Maker|Your) (balance|allowance)/,
+    (_, party: string, kind: string) => {
+      const metadata = party === "Maker" ? state.makerToken : state.takerToken;
+      const address =
+        party === "Maker"
+          ? entry.signed.order.makerToken
+          : entry.signed.order.takerToken;
+      return `${party} ${kind === "allowance" ? "approval" : kind} for ${metadata.symbol.data ?? address}`;
+    },
+  );
+  const blocker =
+    state.chainId !== deployment.chainId
+      ? "Switch to trade network to accept"
+      : (tokenReason ??
+        (decimals.maker === undefined || decimals.taker === undefined
+          ? "Token decimals unavailable"
+          : undefined));
+  const loading =
+    [
+      state.makerToken.decimals,
+      state.takerToken.decimals,
+      state.makerFunding.balance,
+      state.makerFunding.allowance,
+      state.takerFunding.balance,
+      state.takerFunding.allowance,
+    ].some((query) => query.isPending) || state.statusLoading;
+  const visibleBlocker = busy || loading ? undefined : blocker;
   return (
-    <section className="space-y-2" aria-label="Accept trade">
-      <p>
-        Review the amounts and addresses above. Another transaction may accept
-        or cancel this order before yours is included.
-      </p>
-      {reason && <p role="alert">{reason}</p>}
-      {(decimals.maker === undefined || decimals.taker === undefined) && (
-        <p role="alert">
-          Token decimals unavailable. Wait for fresh reads before accepting.
-        </p>
+    <div className="workflow-actions" aria-label="Accept trade">
+      {!busy && (
+        <ApprovalCommitments
+          plan={plan}
+          decimals={decimals.taker}
+          historyError={historyError}
+          mode="acceptance"
+          compact
+          aggregateError={aggregateError}
+        />
       )}
-      <ApprovalCommitments
-        plan={plan}
-        decimals={
-          state.takerToken.decimals.isSuccess
-            ? state.takerToken.decimals.data
-            : undefined
-        }
-        historyError={historyError}
-        mode="acceptance"
-      />
-      {state.takerToken.decimals.isSuccess && (
-        <>
-          <ApprovalAction
-            deployment={deployment}
-            maker={taker}
-            token={entry.signed.order.takerToken}
-            amount={entry.signed.order.takerAmount}
-            decimals={state.takerToken.decimals.data}
-            plan={plan}
-            mode="acceptance"
-            viewed={{
-              order: entry.signed.order,
-              orderId: entry.orderId,
-              deploymentId: deployment.id,
-              status: state.status,
-            }}
-            ready={
-              state.label === "Open" &&
-              decimals.maker !== undefined &&
-              decimals.taker !== undefined
-            }
-          />
-        </>
+      {state.takerToken.decimals.isSuccess &&
+        (!reason || reason.startsWith("Your allowance")) && (
+          <>
+            <ApprovalAction
+              deployment={deployment}
+              maker={taker}
+              token={entry.signed.order.takerToken}
+              amount={entry.signed.order.takerAmount}
+              decimals={state.takerToken.decimals.data}
+              plan={plan}
+              mode="acceptance"
+              viewed={{
+                order: entry.signed.order,
+                orderId: entry.orderId,
+                deploymentId: deployment.id,
+                status: state.status,
+              }}
+              ready={
+                state.label === "Open" &&
+                decimals.maker !== undefined &&
+                decimals.taker !== undefined
+              }
+            />
+          </>
+        )}
+      {!(
+        plan.needsApproval === true && reason?.startsWith("Your allowance")
+      ) && (
+        <Button
+          className={visibleBlocker ? "action-error" : undefined}
+          disabled={
+            busy ||
+            !!reason ||
+            decimals.maker === undefined ||
+            decimals.taker === undefined ||
+            state.chainId !== deployment.chainId
+          }
+          onClick={() => {
+            void settle();
+          }}
+        >
+          {visibleBlocker ?? "Accept trade"}
+        </Button>
       )}
-      <Button
-        disabled={
-          busy ||
-          !!reason ||
-          decimals.maker === undefined ||
-          decimals.taker === undefined ||
-          state.chainId !== deployment.chainId
-        }
-        onClick={() => {
-          void settle();
-        }}
-      >
-        Accept trade
-      </Button>
-    </section>
+    </div>
   );
 }
