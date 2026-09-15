@@ -8,8 +8,12 @@ import {
   type StoredOrder,
 } from "@/infrastructure/storage";
 
-export function useMakerHistory(maker: string, deploymentId: number) {
-  const scope = `${String(deploymentId)}:${maker.toLowerCase()}`;
+export function useMakerHistory(
+  maker: string,
+  deploymentId: number,
+  includeFilled = false,
+) {
+  const scope = `${String(deploymentId)}:${maker.toLowerCase()}:${String(includeFilled)}`;
   const [result, setResult] = useState<{
     scope: string;
     data: ReadResult<StoredOrder[]>;
@@ -20,7 +24,7 @@ export function useMakerHistory(maker: string, deploymentId: number) {
     const read = () => {
       const current = ++generation;
       void browserStorage
-        .readOrders(maker, deploymentId, deployments)
+        .readOrders(maker, deploymentId, deployments, includeFilled)
         .then((data) => {
           if (active && current === generation) setResult({ scope, data });
         });
@@ -31,7 +35,7 @@ export function useMakerHistory(maker: string, deploymentId: number) {
       active = false;
       unsubscribe();
     };
-  }, [scope, maker, deploymentId]);
+  }, [scope, maker, deploymentId, includeFilled]);
   return {
     orders: result?.scope === scope ? result.data.value : [],
     available: result?.scope === scope && !result.data.error,

@@ -9,7 +9,6 @@ import {
   type SavedDraft,
 } from "@/infrastructure/storage";
 
-let preferredDeployment: number | undefined;
 type TransientDraft = {
   draft: CreationDraft;
   error: string;
@@ -22,23 +21,6 @@ export function clearTransientDraft(
 ) {
   if (transientDrafts.get(deploymentId)?.draft === completed)
     transientDrafts.delete(deploymentId);
-}
-export function preferredDraftDeployment() {
-  return preferredDeployment;
-}
-export function beginDraft(deploymentId: number, draft: CreationDraft) {
-  const next: CreationDraft = { ...draft, stage: "edit" };
-  const baseRevision = browserStorage.readDraft(deploymentId).value?.revision;
-  const result = browserStorage.saveDraft(deploymentId, next);
-  preferredDeployment = deploymentId;
-  if (result.ok) transientDrafts.delete(deploymentId);
-  else
-    transientDrafts.set(deploymentId, {
-      draft: next,
-      error: result.error,
-      baseRevision,
-    });
-  return result;
 }
 
 const emptyDraft = creationDraftSchema.parse({});
