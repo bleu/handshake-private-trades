@@ -8,6 +8,11 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-ring: var(--ring);
 }
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
 body {
   background: var(--background);
   color: var(--foreground);
@@ -25,6 +30,7 @@ h1 {
   font-display: swap;
 }
 :root {
+  --control-hit-area: 40px;
   color-scheme: dark;
   --background: #0f1321;
   --foreground: #f2f4f1;
@@ -35,6 +41,11 @@ h1 {
   --paper: #192539;
   --field: #111d30;
   --line: #304159;
+}
+@media (max-width: 760px), (any-pointer: coarse) {
+  :root {
+    --control-hit-area: 44px;
+  }
 }
 body {
   font-family: Handshake, Arial, sans-serif;
@@ -151,7 +162,7 @@ body {
 .handshake-dialog button {
   border-radius: 14px;
   height: auto;
-  min-height: 40px;
+  min-height: var(--control-hit-area);
   white-space: normal;
 }
 .handshake-shell button:disabled,
@@ -360,23 +371,37 @@ body {
 }
 .handshake-info {
   display: inline-flex;
+  flex-shrink: 0;
   position: relative;
   vertical-align: middle;
   margin-left: 4px;
 }
 .handshake-shell .handshake-info > button {
-  border: 1px solid var(--muted-foreground);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
   border-radius: 50%;
-  width: 17px;
-  min-height: 17px;
-  height: 17px;
+  width: var(--control-hit-area);
+  min-height: var(--control-hit-area);
+  height: var(--control-hit-area);
   line-height: 1;
   font-size: 11px;
+}
+.handshake-info > button::before {
+  content: "";
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  border: 1px solid var(--muted-foreground);
+  border-radius: 50%;
+  pointer-events: none;
 }
 .handshake-info [role="tooltip"] {
   position: absolute;
   right: 0;
-  bottom: 24px;
+  bottom: 100%;
   width: 230px;
   max-width: 70vw;
   background: #263c53;
@@ -392,8 +417,8 @@ body {
 .notice-dismiss {
   float: right;
   margin-left: 12px;
-  width: 28px;
-  height: 28px;
+  width: var(--control-hit-area);
+  height: var(--control-hit-area);
   font-size: 22px;
   cursor: pointer;
 }
@@ -943,8 +968,9 @@ body {
   font-size: 10px;
 }
 .token-refresh {
+  min-width: var(--control-hit-area);
   float: right;
-  min-height: 24px !important;
+  min-height: var(--control-hit-area) !important;
   padding: 0 4px !important;
 }
 .import-token-action {
@@ -1073,7 +1099,7 @@ body {
   font-size: 10px;
 }
 .amount-footer button {
-  min-height: 24px !important;
+  min-height: var(--control-hit-area) !important;
   padding: 3px 8px !important;
   background: transparent !important;
   color: var(--foreground) !important;
@@ -1153,11 +1179,12 @@ a {
   cursor: pointer;
 }
 .handshake-shell .amount-footer button {
+  min-width: var(--control-hit-area);
   background: #22465b !important;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 4px 10px !important;
-  min-height: 28px !important;
+  min-height: var(--control-hit-area) !important;
   font-weight: 600;
 }
 .handshake-shell .amount-footer button:disabled {
@@ -1166,6 +1193,8 @@ a {
 }
 
 .token-logo {
+  outline: 1px solid oklch(1 0 0 / 0.1);
+  outline-offset: -1px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -1210,7 +1239,7 @@ a {
   border-radius: 30px;
   padding: 0 15px;
   height: 40px;
-  min-height: 40px;
+  min-height: var(--control-hit-area);
   font-family: Handshake, Arial, sans-serif;
   font-size: 12px;
   font-weight: 400;
@@ -1234,7 +1263,7 @@ a {
     font-size: 11px;
     padding: 0 9px;
     height: 36px;
-    min-height: 36px;
+    min-height: var(--control-hit-area);
   }
   .handshake-header .wallet-network-control {
     font-size: 10px;
@@ -1291,7 +1320,7 @@ a {
 }
 .create-panel .amount-row > button {
   font-size: 13px;
-  min-height: 39px;
+  min-height: var(--control-hit-area);
   padding: 7px;
   gap: 8px;
 }
@@ -1323,7 +1352,7 @@ a {
   background: transparent;
 }
 .counterparty-options button {
-  min-height: 36px;
+  min-height: var(--control-hit-area);
   padding: 9px 5px;
   border-radius: 6px;
   line-height: 18px;
@@ -1385,7 +1414,7 @@ a {
   border: 0;
   border-radius: 8px;
   padding: 9px 12px;
-  min-height: 36px;
+  min-height: var(--control-hit-area);
   font-size: 12px;
   font-weight: 400;
 }
@@ -1422,7 +1451,7 @@ a {
   min-height: 108px;
 }
 .handshake-shell .history-actions button {
-  min-height: 32px;
+  min-height: var(--control-hit-area);
   border-radius: 6px;
 }
 @media (max-width: 760px) {
@@ -1676,7 +1705,7 @@ a {
   height: auto;
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
+  min-height: var(--control-hit-area);
   padding: 6px 8px;
   color: var(--foreground);
   font-size: 12px;
@@ -1734,6 +1763,7 @@ a {
 }
 .handshake-shell .select-control > select,
 .handshake-dialog .select-control > select {
+  min-height: var(--control-hit-area);
   appearance: none;
   border-radius: 999px;
   margin: 0;
@@ -1881,6 +1911,7 @@ a {
   margin: 0;
 }
 .help-intro {
+  text-wrap: pretty;
   color: var(--muted-foreground);
   line-height: 1.7;
 }
@@ -1894,6 +1925,7 @@ a {
   margin-bottom: 16px;
 }
 .help-panel p {
+  text-wrap: pretty;
   color: var(--muted-foreground);
   line-height: 1.75;
 }
