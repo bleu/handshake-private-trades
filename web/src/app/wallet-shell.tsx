@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WalletControls } from "@/features/wallet";
 import { NoticeRegion } from "@/components/ui/notice";
+import { Icon } from "@/components/ui/icon";
 import { Providers } from "./providers";
 
 export default function WalletShell({ children }: { children: ReactNode }) {
@@ -68,6 +69,35 @@ export default function WalletShell({ children }: { children: ReactNode }) {
           >
             {children}
           </main>
+          <footer className="handshake-footer">
+            <a
+              className="footer-repository"
+              aria-label="Source code on GitHub"
+              href="https://github.com/bleu/handshake-private-trades"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Icon name="github" />
+            </a>
+            <p className="footer-attribution">
+              Developed with <Icon name="heart" />
+              <span className="sr-only">love</span> by{" "}
+              <a
+                href="https://bleu.builders/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                bleu
+              </a>
+            </p>
+            <a
+              href="https://etherscan.io/address/0x5D40015034DA6cD75411c54dd826135f725c2498"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              bleubuilders.eth
+            </a>
+          </footer>
         </div>
       </Providers>
     </NoticeRegion>

@@ -48,6 +48,45 @@ body {
   margin: auto;
   position: relative;
 }
+.handshake-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 24px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.handshake-footer a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.handshake-footer a:hover {
+  color: var(--foreground);
+}
+.handshake-footer a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.footer-repository {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+}
+.footer-attribution {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+}
+.footer-attribution svg {
+  color: var(--primary);
+}
 .handshake-header {
   display: flex;
   align-items: center;
