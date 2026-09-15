@@ -257,24 +257,26 @@ function CreationForm({
                         : undefined
                   }
                 />
-                {field === "makerToken" && (
-                  <Button
-                    disabled={
-                      !send.balance.isSuccess || !send.decimals.isSuccess
-                    }
-                    onClick={() => {
-                      if (send.balance.isSuccess && send.decimals.isSuccess)
-                        update({
-                          makerAmount: formatAmount(
-                            send.balance.data,
-                            send.decimals.data,
-                          ),
-                        });
-                    }}
-                  >
-                    Max
-                  </Button>
-                )}
+                {field === "makerToken" &&
+                  maker &&
+                  makerAddress.success &&
+                  send.balance.isSuccess &&
+                  send.balance.data > 0n && (
+                    <Button
+                      disabled={!send.decimals.isSuccess}
+                      onClick={() => {
+                        if (send.balance.isSuccess && send.decimals.isSuccess)
+                          update({
+                            makerAmount: formatAmount(
+                              send.balance.data,
+                              send.decimals.data,
+                            ),
+                          });
+                      }}
+                    >
+                      Max
+                    </Button>
+                  )}
               </div>
             </div>
           );

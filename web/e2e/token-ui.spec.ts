@@ -29,7 +29,7 @@ const tokens = [
     decimals: 6,
   },
 ];
-async function setup(page: Page) {
+async function setup(page: Page, makerBalance = 1234567n) {
   await connectTokenWallet(page);
   const values = new Map<string, string>();
   const storage = createStorageAdapter(() => ({
@@ -82,7 +82,7 @@ async function setup(page: Page) {
       if (call.data.data.startsWith("0x70a08231"))
         value =
           call.data.to === first
-            ? 1234567n
+            ? makerBalance
             : call.data.to === second
               ? 9200000000000000000n
               : 123n;
@@ -631,4 +631,47 @@ test("review explains a completed decimals failure only after the refresh settle
   await expect(
     page.getByText("Token decimals unavailable.", { exact: true }),
   ).toBeVisible();
+});
+
+test("Max is hidden until a selected token has a positive wallet balance", async ({
+  page,
+}) => {
+  await setup(page);
+  await page.goto("/");
+  const max = page.getByRole("button", { name: "Max", exact: true });
+  await expect(
+    page.getByRole("button", { name: "Choose Send token", exact: true }),
+  ).toContainText("AAA");
+  await expect(max).toHaveCount(0);
+  await connect(page);
+  await expect(max).toBeVisible();
+  await max.click();
+  await expect(page.getByLabel("Send amount")).toHaveValue("1.234567");
+});
+
+test("Max is hidden for a selected token with zero balance", async ({
+  page,
+}) => {
+  await setup(page, 0n);
+  await page.goto("/");
+  await connect(page);
+  await expect(page.getByText("Balance: 0", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Max", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("Max is hidden when no send token is selected", async ({ page }) => {
+  await setup(page);
+  await page.addInitScript(() => {
+    localStorage.clear();
+  });
+  await page.goto("/");
+  await connect(page);
+  await expect(
+    page.getByRole("button", { name: "Choose Send token", exact: true }),
+  ).toContainText("Select token");
+  await expect(
+    page.getByRole("button", { name: "Max", exact: true }),
+  ).toHaveCount(0);
 });
