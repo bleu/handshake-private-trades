@@ -13,7 +13,7 @@ export function TokenBalance({
   const balance = useDisplayBalance(chainId, address);
   if (!balance) return null;
   return (
-    <span>
+    <span className="tabular-nums">
       Balance: {formatAmount(BigInt(balance.amount), balance.decimals)}
     </span>
   );

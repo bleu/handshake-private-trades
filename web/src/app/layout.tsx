@@ -8,7 +8,7 @@ export const metadata = { title: "Handshake" };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className="antialiased">
         <ClientShell>{children}</ClientShell>
       </body>
     </html>
