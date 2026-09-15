@@ -9,7 +9,13 @@ export async function connectTokenWallet(page: Page) {
     Object.defineProperty(window, "ethereum", {
       value: {
         isMetaMask: true,
-        request: ({ method }: { method: string }) => {
+        request: ({
+          method,
+          params,
+        }: {
+          method: string;
+          params?: { chainId: string }[];
+        }) => {
           if (method === "eth_requestAccounts") {
             connected = true;
             return Promise.resolve([account]);
@@ -17,6 +23,12 @@ export async function connectTokenWallet(page: Page) {
           if (method === "eth_accounts")
             return Promise.resolve(connected ? [account] : []);
           if (method === "eth_chainId") return Promise.resolve(chainId);
+          if (method === "wallet_switchEthereumChain") {
+            chainId = params?.[0]?.chainId ?? chainId;
+            for (const listener of listeners.get("chainChanged") ?? [])
+              listener(chainId);
+            return Promise.resolve(null);
+          }
           if (method === "wallet_requestPermissions")
             return Promise.resolve([{ parentCapability: "eth_accounts" }]);
           if (method === "wallet_revokePermissions")

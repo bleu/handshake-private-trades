@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import {
   connectorsForWallets,
+  darkTheme,
   RainbowKitProvider,
 } from "@rainbow-me/rainbowkit";
 import {
@@ -54,7 +55,13 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+        <RainbowKitProvider
+          theme={darkTheme({
+            accentColor: "#20c5d9",
+            accentColorForeground: "#04232b",
+            borderRadius: "large",
+          })}
+        >
           <WalletReadRefresh />
           <TransactionProvider>
             <TransactionFeedback />

@@ -3,7 +3,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
 import { ClientShell } from "./client-shell";
 
-export const metadata = { title: "Private Trade Links" };
+export const metadata = { title: "Handshake" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

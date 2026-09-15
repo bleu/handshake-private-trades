@@ -41,6 +41,20 @@ export async function installAnvilWallet(
           }
           if (method === "eth_accounts") return connected ? [account] : [];
           if (method === "eth_chainId") return chainId;
+          if (method === "wallet_switchEthereumChain") {
+            const request = params[0];
+            if (
+              typeof request !== "object" ||
+              request === null ||
+              !("chainId" in request) ||
+              typeof request.chainId !== "string"
+            )
+              throw new Error("Invalid chain request");
+            chainId = request.chainId;
+            for (const listener of listeners.get("chainChanged") ?? [])
+              listener(chainId);
+            return null;
+          }
           if (method === "wallet_requestPermissions")
             return [{ parentCapability: "eth_accounts" }];
           if (method === "wallet_revokePermissions") return null;

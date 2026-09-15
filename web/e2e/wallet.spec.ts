@@ -5,15 +5,15 @@ test("a visitor can navigate the three screens and open wallet connection", asyn
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Create a trade" }),
+    page.getByRole("heading", { name: "Create an order" }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Trade link" }).click();
   await expect(
-    page.getByRole("heading", { name: "Review a trade" }),
+    page.getByRole("heading", { name: "Review trade", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "History" }).click();
   await expect(
-    page.getByRole("heading", { name: "Maker history" }),
+    page.getByRole("heading", { name: "History", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Connect Wallet" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -91,24 +91,58 @@ test("a browser wallet can connect, switch supported networks, change account, a
   await expect(page.getByText("Wrong network", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Chain Selector" }).click();
   await page.getByRole("button", { name: /Gnosis/ }).click();
-  await expect(
-    page.getByText(
-      "Connected account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      { exact: true },
-    ),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /0xf3/i })).toBeVisible();
   await page.evaluate(() =>
     window.dispatchEvent(new Event("test:wallet-account")),
   );
-  await expect(
-    page.getByText(
-      "Connected account: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-      { exact: true },
-    ),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /0x70/i })).toBeVisible();
   await page.getByRole("button", { name: /0x70/ }).click();
   await page.getByRole("button", { name: /Disconnect/ }).click();
   await expect(
     page.getByRole("button", { name: "Connect Wallet" }),
+  ).toBeVisible();
+});
+
+test("the connected header shows the wallet control without a second account paragraph", async ({
+  page,
+}) => {
+  const { installAnvilWallet } = await import("./anvil-wallet");
+  await installAnvilWallet(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Connect Wallet", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
+    .click();
+  await expect(page.getByRole("button", { name: /0xf3/i })).toBeVisible();
+  await expect(page.getByText(/^Connected account:/)).toHaveCount(0);
+});
+
+test("one header chain control drives the Create token network", async ({
+  page,
+}) => {
+  const { installAnvilWallet } = await import("./anvil-wallet");
+  await installAnvilWallet(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Connect Wallet", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: /MetaMask|Browser Wallet|Injected/ })
+    .click();
+  await expect(page.getByRole("banner").getByRole("combobox")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Chain Selector", exact: true }),
+  ).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Chain Selector", exact: true })
+    .click();
+  await page.getByRole("button", { name: /Gnosis/ }).click();
+  await page
+    .getByRole("button", { name: "Choose Send token", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Select token", exact: true }),
   ).toBeVisible();
 });
