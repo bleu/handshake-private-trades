@@ -15,7 +15,7 @@ const dirty = run("git", ["status", "--porcelain"]) !== "";
 execFileSync("forge", ["build", "--force", "--build-info"], {
   stdio: "inherit",
 });
-execFileSync("npm", ["run", "abi:check"], { stdio: "inherit" });
+execFileSync("pnpm", ["run", "abi:check"], { stdio: "inherit" });
 const target = "contracts/src/PrivateTradeSettlement.sol";
 const name = "PrivateTradeSettlement";
 const artifact = JSON.parse(
@@ -69,10 +69,10 @@ const manifest = {
   compiler: artifact.metadata.compiler.version,
   settings: artifact.metadata.settings,
   node: process.version,
-  npm: run("npm", ["--version"]),
+  pnpm: run("pnpm", ["--version"]),
   forge: run("forge", ["--version"]),
   forgeStdRevision: run("git", ["-C", "lib/forge-std", "rev-parse", "HEAD"]),
-  packageLockSha256: sha256(readFileSync("package-lock.json")),
+  pnpmLockSha256: sha256(readFileSync("pnpm-lock.yaml")),
   intendedDeployment: {
     id: 1,
     chainId: 100,

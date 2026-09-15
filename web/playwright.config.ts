@@ -15,15 +15,24 @@ export default defineConfig({
     headless: true,
     channel: process.env.PLAYWRIGHT_CHANNEL,
   },
-  webServer: {
-    command: "npm run dev -- --port 3100",
-    url: "http://127.0.0.1:3100",
-    reuseExistingServer: !process.env.CI,
-    env: {
-      PTL_E2E: "true",
-      NEXT_PUBLIC_ENABLE_ANVIL: "true",
-      NEXT_PUBLIC_GNOSIS_SETTLEMENT_ADDRESS:
-        "0x0000000000000000000000000000000000001000",
+  webServer: [
+    {
+      name: "Test chain",
+      command: "node ../scripts/test-chain.mjs",
+      wait: { stdout: /Test chain ready/ },
+      timeout: 120_000,
+      gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
     },
-  },
+    {
+      command: "pnpm run dev --port 3100",
+      url: "http://127.0.0.1:3100",
+      reuseExistingServer: !process.env.CI,
+      env: {
+        PTL_E2E: "true",
+        NEXT_PUBLIC_ENABLE_ANVIL: "true",
+        NEXT_PUBLIC_GNOSIS_SETTLEMENT_ADDRESS:
+          "0x0000000000000000000000000000000000001000",
+      },
+    },
+  ],
 });

@@ -1,35 +1,29 @@
 {
   "name": "private-trade-links",
   "private": true,
-  "workspaces": [
-    "web"
-  ],
   "engines": {
     "node": ">=24.11.0 <25"
   },
   "scripts": {
-    "dev": "npm run dev -w web",
-    "build": "npm run build -w web",
-    "typecheck": "npm run typecheck -w web",
-    "lint:web": "npm run lint -w web",
+    "dev": "pnpm --filter @private-trade-links/web run dev",
+    "build": "pnpm --filter @private-trade-links/web run build",
+    "typecheck": "pnpm --filter @private-trade-links/web run typecheck",
+    "lint:web": "pnpm --filter @private-trade-links/web run lint",
     "format": "prettier --write . && forge fmt",
     "format:check": "prettier --check . && forge fmt --check",
     "build:contracts": "forge build",
+    "deploy:simulate": "forge script contracts/script/DeploySettlement.s.sol:DeploySettlement --rpc-url gnosis",
+    "deploy:gnosis": "forge script contracts/script/DeploySettlement.s.sol:DeploySettlement --rpc-url gnosis --broadcast --verify --verifier etherscan",
+    "verify:gnosis": "forge verify-contract --chain 100 --verifier etherscan --watch",
     "lint:contracts": "solhint 'contracts/**/*.sol' --max-warnings 0 && .tools/bin/lintspec contracts",
-    "check": "npm run wallet-cache:check && npm run format:check && npm run lint:web && npm run typecheck && npm run lint:contracts && npm run build:contracts && npm run test:unit && npm run test:contracts && npm run config:smoke && npm run abi:check && npm run build:smoke",
-    "local:start": "node scripts/local-chain.mjs start",
-    "local:reset": "node scripts/local-chain.mjs reset",
-    "local:fixtures": "node scripts/local-chain.mjs fixtures",
-    "local:smoke": "node scripts/local-chain.mjs smoke",
-    "test:e2e": "npm run test:e2e -w web",
+    "check": "pnpm run wallet-cache:check && pnpm run format:check && pnpm run lint:web && pnpm run typecheck && pnpm run lint:contracts && pnpm run build:contracts && pnpm run test:unit && pnpm run test:contracts && pnpm run config:smoke && pnpm run abi:check && pnpm run build:smoke",
+    "test:e2e": "pnpm --filter @private-trade-links/web run test:e2e",
     "test:contracts": "forge test",
     "abi:export": "node scripts/export-abi.mjs",
     "abi:check": "node scripts/export-abi.mjs --check",
-    "local:deploy": "node scripts/local-chain.mjs deploy",
-    "local:settlement-smoke": "node scripts/settlement-smoke.mjs",
     "build:smoke": "node scripts/build-smoke.mjs",
     "config:smoke": "node scripts/config-smoke.mjs",
-    "test:unit": "npm run test:unit -w web",
+    "test:unit": "pnpm --filter @private-trade-links/web run test:unit",
     "postinstall": "node scripts/patch-wallet-cache.mjs",
     "wallet-cache:patch": "node scripts/patch-wallet-cache.mjs",
     "wallet-cache:check": "node scripts/patch-wallet-cache.mjs --check",
@@ -45,9 +39,22 @@
     "prettier": "3.8.2",
     "solhint-community": "4.0.1",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.57.1"
+    "typescript-eslint": "8.57.1",
+    "viem": "2.56.3"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.4.0"
+  },
+  "packageManager": "pnpm@10.5.2",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "bufferutil",
+      "esbuild",
+      "keccak",
+      "sharp",
+      "unrs-resolver",
+      "utf-8-validate"
+    ]
   }
 }

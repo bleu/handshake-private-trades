@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title DevelopmentToken
-/// @notice Ordinary ERC-20 fixture deployed only by the local development commands.
+/// @notice Ordinary ERC-20 fixture used by automated Solidity and browser tests.
 contract DevelopmentToken is ERC20 {
     /// @notice Decimal scale of this local fixture.
     uint8 private immutable _DECIMALS;

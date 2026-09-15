@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 console.log(
   "Building with a synthetic Gnosis address for verification only. Do not publish this output.",
 );
-execFileSync("npm", ["run", "build"], {
+execFileSync("pnpm", ["run", "build"], {
   stdio: "inherit",
   env: {
     ...process.env,

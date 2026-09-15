@@ -7,34 +7,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-          cache: npm
+          cache: pnpm
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly-5e88010a83d1b87b8f4d13058e42a2949d3e9dc0
       - uses: dtolnay/rust-toolchain@1.94.0
       - run: cargo install lintspec --version 0.12.2 --locked --root .tools
-      - run: npm ci
-      - run: npm run check
-      - run: npx playwright install --with-deps chromium
-      - name: Local chain smoke
-        run: |
-          npm run local:start > /tmp/private-trades-anvil.log 2>&1 &
-          node_pid=$!
-          trap 'kill "$node_pid"' EXIT
-          for attempt in $(seq 1 30); do
-            if cast chain-id --rpc-url http://127.0.0.1:8545; then break; fi
-            sleep 1
-          done
-          npm run local:deploy
-          npm run local:deploy
-          npm run local:settlement-smoke
-          npm run local:smoke
-          npm run local:reset
-          npm run local:deploy
-          npm run local:deploy
-          npm run local:settlement-smoke
-          npm run local:smoke
-          npm run test:e2e
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run check
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Browser tests
+        run: pnpm run test:e2e

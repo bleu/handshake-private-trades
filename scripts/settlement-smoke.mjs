@@ -5,19 +5,13 @@ import { createPublicClient, http } from "viem";
 import { orderId, orderSchema } from "../web/src/domain/orders/index.ts";
 import { createDeploymentRegistry } from "../web/src/config/deployments.ts";
 
-const url = new URL(process.env.ANVIL_RPC_URL ?? "http://127.0.0.1:8545");
-assert(
-  url.protocol === "http:" &&
-    ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname),
-  "Local RPC required",
-);
-if (url.hostname === "localhost") url.hostname = "127.0.0.1";
-if (!url.port) url.port = "8545";
+// Fixed endpoint owned by the automated browser-test fixture.
+const rpc = "http://127.0.0.1:8545";
 const [deployment] = createDeploymentRegistry({
   enableAnvil: true,
   publicBuild: false,
 });
-const client = createPublicClient({ transport: http(url.toString()) });
+const client = createPublicClient({ transport: http(rpc) });
 assert.equal(await client.getChainId(), deployment.chainId);
 const code = await client.getCode({ address: deployment.address });
 assert(code && code !== "0x", "Settlement is not deployed");

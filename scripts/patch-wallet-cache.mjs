@@ -1,12 +1,15 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 // RainbowKit 2.2.11 directly accesses optional browser caches. A SecurityError
 // must not prevent viewing/signing orders when our own storage adapter is usable
 // only transiently. Patch only the root entry point imported by this application.
-const file = fileURLToPath(import.meta.resolve("@rainbow-me/rainbowkit"));
+const requireWeb = createRequire(
+  new URL("../web/package.json", import.meta.url),
+);
+const file = requireWeb.resolve("@rainbow-me/rainbowkit");
 const version = JSON.parse(
   await readFile(resolve(dirname(file), "../package.json"), "utf8"),
 ).version;
@@ -45,7 +48,7 @@ const expected =
 if (process.argv.includes("--check")) {
   if (source !== expected)
     throw new Error(
-      "Run npm run wallet-cache:patch before building or starting the app.",
+      "Run pnpm run wallet-cache:patch before building or starting the app.",
     );
   console.log("PASS: version-checked optional wallet-cache patch.");
 } else {

@@ -11,6 +11,9 @@ optimizer = true
 optimizer_runs = 200
 fs_permissions = [{ access = "read", path = "./fixtures" }]
 
+[rpc_endpoints]
+gnosis = "${GNOSIS_RPC_URL}"
+
 [invariant]
 runs = 128
 depth = 64
