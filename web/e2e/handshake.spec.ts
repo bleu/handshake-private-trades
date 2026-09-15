@@ -546,3 +546,19 @@ test("network and token selectors use aligned text-sized chevrons and a chain ic
     expect(size.arrow).toBe(size.text);
   }
 });
+
+test("mobile header keeps wallet controls beside the brand while the custom font is unavailable", async ({
+  page,
+}) => {
+  await page.route("**/*.woff2", (route) => route.abort());
+  await page.setViewportSize({ width: 360, height: 900 });
+  await page.goto("/");
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(navigation).toBeVisible();
+  const header = await page.getByRole("banner").boundingBox();
+  const mobile = await navigation.boundingBox();
+  expect((mobile?.y ?? 0) - (header?.y ?? 0)).toBeLessThan(100);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    360,
+  );
+});

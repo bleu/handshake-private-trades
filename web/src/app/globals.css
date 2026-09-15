@@ -1611,6 +1611,19 @@ a {
     padding: 0 6px;
   }
 }
+@media (max-width: 400px) {
+  .handshake-header {
+    padding: 16px;
+    gap: 8px;
+  }
+  .handshake-brand {
+    font-size: 14px;
+  }
+  .handshake-brand svg {
+    width: 28px;
+    height: 28px;
+  }
+}
 
 .history-pagination {
   display: flex;
