@@ -216,9 +216,9 @@ test("the compact picker waits for balances and sorts quantities across differen
     await expect(dialog.getByRole("option")).toHaveCount(0);
     release();
     await expect(dialog.getByRole("option")).toHaveText([
-      /AAA.*123.45/s,
-      /BBB.*9.2/s,
-      /CCC.*<0.01/s,
+      /AAA.*0x1111…1111.*123.45/s,
+      /BBB.*0x2222…2222.*9.2/s,
+      /CCC.*0x3333…3333.*<0.01/s,
     ]);
     await expect(
       dialog.getByRole("button", { name: "Refresh token list" }),

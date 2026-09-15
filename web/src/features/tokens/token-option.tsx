@@ -58,6 +58,11 @@ export function TokenOption({
       <TokenLogo key={token.logoURI} source={token.logoURI} symbol={symbol} />
       <span>
         <strong>{symbol}</strong>
+        {compact && (
+          <small title={token.address}>
+            {token.address.slice(0, 6)}…{token.address.slice(-4)}
+          </small>
+        )}
         {!compact && (
           <>
             <small>{name}</small>
